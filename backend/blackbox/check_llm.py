@@ -34,7 +34,7 @@ TOOLS = [{
 
 def main() -> None:
     if not config.LLM_API_KEY:
-        raise SystemExit("No API key: set GROQ_API_KEY in backend/.env")
+        raise SystemExit(f"No API key for provider {config.PROVIDER}: set it in backend/.env")
     client = OpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY)
     start = time.perf_counter()
     raw = client.chat.completions.with_raw_response.create(

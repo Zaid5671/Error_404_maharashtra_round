@@ -8,13 +8,18 @@ from dotenv import load_dotenv
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BACKEND_DIR / ".env")
 
-PROVIDER = os.getenv("LLM_PROVIDER", "groq")  # "groq" or "ollama" (fallback)
+PROVIDER = os.getenv("LLM_PROVIDER", "gemini")  # "gemini", "groq" (demo backup) or "ollama"
 
 PROVIDERS = {
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",
         "api_key": os.getenv("GROQ_API_KEY", ""),
         "model": "openai/gpt-oss-120b",
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "api_key": os.getenv("GEMINI_API_KEY", ""),
+        "model": "gemini-3.5-flash-lite",
     },
     "ollama": {
         "base_url": "http://localhost:11434/v1",
