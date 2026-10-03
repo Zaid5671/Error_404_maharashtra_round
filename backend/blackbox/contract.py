@@ -125,10 +125,12 @@ class RunRequest(Model):
 
 
 class DiagnoseRequest(Model):
+    agent: str
     run_id: str
 
 
 class ReplayRequest(Model):
+    agent: str
     run_id: str
     step_id: int
     new_output: dict[str, Any]

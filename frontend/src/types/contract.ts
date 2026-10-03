@@ -104,10 +104,12 @@ export interface RunRequest {
 }
 
 export interface DiagnoseRequest {
+  agent: string
   run_id: string
 }
 
 export interface ReplayRequest {
+  agent: string
   run_id: string
   step_id: number
   new_output: Json
