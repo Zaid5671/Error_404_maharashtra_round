@@ -1,25 +1,27 @@
 """The pizza ordering agent: system prompt, tool-calling loop, run assembly.
 
-Run one order:      python -m blackbox.agent pair_pizza20_given --seed 0
-Run every template: python -m blackbox.agent --all
+It reports every step to the Black Box recorder; it knows nothing else about the Black Box.
+
+Run one order:      python -m agents.pizza.agent pair_pizza20_given --seed 0
+Run every template: python -m agents.pizza.agent --all
 """
 
 import argparse
 import json
 import time
 import uuid
-from collections.abc import Callable
 from typing import Any
 
-from blackbox import config, llm, shop, tools
+from agents import config, llm
+from agents.pizza import shop, tools
+from agents.pizza.orders import TEMPLATES, generate
+from agents.pizza.solver import judge
+from blackbox.adapter import EventFn
 from blackbox.contract import Run
-from blackbox.orders import TEMPLATES, generate
-from blackbox.recorder import Recorder
-from blackbox.solver import judge
+from blackbox.recorder import OutputHook, Recorder
+from blackbox.store import save_run
 
-EventFn = Callable[[str, dict], None]
-# (step_id, tool name, args, output) -> output; the fault injector plugs in here
-StepHook = Callable[[int, str, dict, dict], dict]
+AGENT_NAME = "pizza"
 
 
 def _menu_text() -> str:
@@ -37,7 +39,7 @@ def _coupons_text() -> str:
     return "\n".join(lines)
 
 
-SYSTEM_PROMPT = f"""You are the ordering agent for a pizza shop in Mumbai. Today is {config.SHOP_DATE}.
+SYSTEM_PROMPT = f"""You are the ordering agent for a pizza shop in Mumbai. Today is {shop.SHOP_DATE.isoformat()}.
 Use tools for every step. You may make several tool calls in one turn when they don't depend on each other.
 
 1. Call parse_order with the order exactly as the customer wrote it.
@@ -63,13 +65,11 @@ def execute_call(
     request_text: str,
     llm_stats: dict | None,
     on_event: EventFn | None = None,
-    step_hook: StepHook | None = None,
 ) -> dict:
-    """Run one tool call from the LLM, append its tool message, record the step. Returns the step."""
+    """Run one tool call from the LLM, record the step, append its tool message. Returns the step."""
     name = call["function"]["name"]
-    step_id = len(rec.steps) + 1
     if on_event:
-        on_event("step_started", {"id": step_id, "name": name})
+        on_event("step_started", {"id": rec.next_id, "name": name})
 
     start = time.perf_counter()
     try:
@@ -78,19 +78,22 @@ def execute_call(
     except json.JSONDecodeError:
         args, output = {}, {"error": "arguments were not valid JSON"}
     tool_ms = int((time.perf_counter() - start) * 1000)
-    if step_hook:
-        output = step_hook(step_id, name, args, output)
 
-    messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(output)})
+    tool = tools.TOOLS.get(name)
     step = rec.record(
-        name,
-        args,
-        output,
+        name=name,
+        kind=tool.kind if tool else "tool",
+        args=args,
+        output=output,
+        reads=tool.reads(args) if tool else [],
+        writes=(lambda out: tool.writes(args, out)) if tool else (lambda out: []),
+        apply=(lambda out: tool.write(rec.state, out)) if tool else (lambda out: None),
         step_input={"request_text": request_text} if name == "parse_order" else None,
         llm=llm_stats,
         tool_latency_ms=tool_ms,
-        msg_index=len(messages),
+        msg_index=len(messages) + 1,  # right after the tool message appended below
     )
+    messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(step["output"])})
     if on_event:
         on_event("step_done", {"step": step})
     return step
@@ -102,7 +105,6 @@ def run_loop(
     *,
     request_text: str,
     on_event: EventFn | None = None,
-    step_hook: StepHook | None = None,
     llm_calls: int = 0,
 ) -> int:
     """Ask the LLM, run its tool calls, repeat until it stops, places the order, or hits the call cap.
@@ -124,7 +126,6 @@ def run_loop(
                 request_text=request_text,
                 llm_stats=stats if i == 0 else None,
                 on_event=on_event,
-                step_hook=step_hook,
             )
             placed = placed or (step["name"] == "place_order" and step["error"] is None)
         if placed:
@@ -146,34 +147,35 @@ def actual_result(steps: list[dict]) -> dict | None:
 
 
 def run_order(
-    spec: dict,
+    task: dict,
     *,
     run_id: str | None = None,
     source: str = "generated",
     on_event: EventFn | None = None,
-    step_hook: StepHook | None = None,
+    output_hook: OutputHook | None = None,
 ) -> dict:
-    """Run the agent on one order from orders.generate (or a live order with the same keys)."""
+    """Run the agent on one task from orders.generate (or a live order with the same keys)."""
     run_id = run_id or f"run_{uuid.uuid4().hex[:8]}"
     messages: list[dict] = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": spec["request_text"]},
+        {"role": "user", "content": task["request_text"]},
     ]
-    rec = Recorder()
-    run_loop(messages, rec, request_text=spec["request_text"], on_event=on_event, step_hook=step_hook)
+    rec = Recorder(tools.new_state(), output_hook)
+    run_loop(messages, rec, request_text=task["request_text"], on_event=on_event)
 
     actual = actual_result(rec.steps)
     run = {
         "run_id": run_id,
-        "template_id": spec["template_id"],
+        "agent": AGENT_NAME,
+        "template_id": task["template_id"],
         "source": source,
         "parent_run_id": None,
         "replayed_from_step": None,
-        "order": spec["order"],
-        "request_text": spec["request_text"],
-        "expected": spec["expected"],
+        "task": task["task"],
+        "request_text": task["request_text"],
+        "expected": task["expected"],
         "actual": actual,
-        "outcome": judge(spec["expected"], actual),
+        "outcome": judge(task["expected"], actual),
         "fault": None,
         "split": None,
         "messages": messages,
@@ -183,12 +185,6 @@ def run_order(
     if on_event:
         on_event("run_done", {k: run[k] for k in ("run_id", "outcome", "actual", "expected")})
     return run
-
-
-def save_run(run: dict) -> None:
-    config.RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    path = config.RUNS_DIR / f"{run['run_id']}.json"
-    path.write_text(json.dumps(run, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def run_stats(run: dict) -> dict:
@@ -211,9 +207,9 @@ def main() -> None:
     template_ids = list(TEMPLATES) if args.all else [args.template]
     totals = {"llm_calls": 0, "tokens_in": 0, "tokens_out": 0, "success": 0}
     for tid in template_ids:
-        spec = generate(tid, args.seed)
+        task = generate(tid, args.seed)
         start = time.perf_counter()
-        run = run_order(spec, run_id=f"run_p1_{tid}_{args.seed}")
+        run = run_order(task, run_id=f"run_check_{tid}_{args.seed}")
         save_run(run)
         s = run_stats(run)
         for k in ("llm_calls", "tokens_in", "tokens_out"):

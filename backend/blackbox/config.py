@@ -1,45 +1,9 @@
-"""LLM provider, model and paths. Switching provider is a one-line change to PROVIDER."""
+"""Black Box paths. Nothing here depends on a particular agent."""
 
-import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BACKEND_DIR / ".env")
-
-PROVIDER = os.getenv("LLM_PROVIDER", "gemini")  # "gemini", "groq" (demo backup) or "ollama"
-
-PROVIDERS = {
-    "groq": {
-        "base_url": "https://api.groq.com/openai/v1",
-        "api_key": os.getenv("GROQ_API_KEY", ""),
-        "model": "openai/gpt-oss-120b",
-    },
-    "gemini": {
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "api_key": os.getenv("GEMINI_API_KEY", ""),
-        "model": "gemini-3.5-flash-lite",
-    },
-    "ollama": {
-        "base_url": "http://localhost:11434/v1",
-        "api_key": "ollama",
-        "model": "llama3.1",
-    },
-}
-
-LLM_BASE_URL = PROVIDERS[PROVIDER]["base_url"]
-LLM_API_KEY = PROVIDERS[PROVIDER]["api_key"]
-LLM_MODEL = os.getenv("LLM_MODEL", PROVIDERS[PROVIDER]["model"])
-TEMPERATURE = 0
-REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT", "medium")  # "none", "low", "medium", "high"
-
-DATA_DIR = BACKEND_DIR / "blackbox" / "data"
-RUNS_DIR = BACKEND_DIR / "runs"
+RUNS_DIR = BACKEND_DIR / "runs"  # runs/<agent>/<run_id>.json
 MODELS_DIR = BACKEND_DIR / "models"
 REPORTS_DIR = BACKEND_DIR / "reports"
 SAMPLE_DIR = BACKEND_DIR.parent / "frontend" / "src" / "sample"
-
-SHOP_DATE = "2026-10-03"  # fixed, so coupon expiry never depends on the day we run
-MAX_LLM_CALLS = 12  # per run; a run that hits this ends without placing an order
-REQUESTS_PER_MINUTE = 14  # Gemini free tier allows 15 per model per project

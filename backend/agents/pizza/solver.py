@@ -2,7 +2,7 @@
 
 from collections import Counter
 
-from blackbox import shop
+from agents.pizza import shop
 
 
 def solve(order: dict) -> dict:

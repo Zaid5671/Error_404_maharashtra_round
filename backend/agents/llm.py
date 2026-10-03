@@ -6,7 +6,7 @@ import time
 
 from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
 
-from blackbox import config
+from agents import config
 
 
 class QuotaExhausted(Exception):

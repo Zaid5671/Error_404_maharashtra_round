@@ -1,10 +1,11 @@
 {
   "run_id": "run_sample_coupon",
-  "template_id": "two_pizzas_coupon_03",
+  "agent": "pizza",
+  "template_id": "pair_pizza20_given",
   "source": "generated",
   "parent_run_id": null,
   "replayed_from_step": null,
-  "order": {
+  "task": {
     "items": [
       {
         "pizza": "pepperoni",
@@ -63,22 +64,22 @@
     ],
     "subtotal": 1147,
     "coupon": "PIZZA20",
-    "discount": 115,
+    "discount": 114,
     "delivery_fee": 40,
-    "total": 1072
+    "total": 1073
   },
   "outcome": "failure",
   "fault": {
     "type": "wrong_discount",
     "family": "tool",
     "step_id": 7,
-    "detail": "discount_pct 20 -> 10"
+    "detail": "PIZZA20 value 20 -> 10"
   },
   "split": "test",
   "messages": [
     {
       "role": "system",
-      "content": "You are a pizza ordering agent. Follow the shop rules. Call one tool at a time."
+      "content": "You are the ordering agent for a pizza shop in Mumbai. Today is 2026-10-03.\nUse tools for every step. You may make several tool calls in one turn when they don't depend on each other.\n\n1. Call parse_order with the order exactly as the customer wrote it.\n2. For each item call search_menu (with the pizza id) and check_stock.\n3. If an item is out of stock, replace it with the pizza of the same category and size whose price is closest to it (tie: the cheaper one). Use search_menu with the category to compare prices, and check_stock the replacement. Don't ask the customer.\n4. Call add_to_cart once with all final items. Coupons can only be applied after this.\n5. Coupon: call apply_coupon at most once per order. Each call replaces the previous coupon, so never use it to test codes.\n   - If the customer gave a code, apply exactly that code. If it comes back invalid, the order has no coupon: don't try any other code.\n   - If they gave no code, work out yourself from the rules below which valid coupon gives the biggest discount on the subtotal (tie: PIZZA20), then apply only that one. If none is valid, skip this step.\n6. Call check_delivery. If the area is not deliverable, stop and tell the customer; don't place the order.\n7. Call calculate_total, then place_order.\n\nMenu ids: veg: margherita, veg_supreme, paneer_tikka; non-veg: pepperoni, chicken_tikka, bbq_chicken\nCoupons:\n- WELCOME50: Rs 50 off, minimum order Rs 300, expires 2026-12-31\n- PIZZA20: 20% off (rounded down), minimum order Rs 500, expires 2026-12-31\n- BIG300: Rs 300 off, minimum order Rs 1200, expires 2026-12-31\n- DIWALI30: 30% off (rounded down), minimum order Rs 600, expires 2026-09-30"
     },
     {
       "role": "user",
@@ -86,7 +87,6 @@
     },
     {
       "role": "assistant",
-      "content": null,
       "tool_calls": [
         {
           "id": "call_01",
@@ -101,50 +101,27 @@
     {
       "role": "tool",
       "tool_call_id": "call_01",
-      "content": "{\"recorded\": true}"
+      "content": "{\"items\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1}], \"coupon\": \"PIZZA20\", \"area\": \"Andheri\"}"
     },
     {
       "role": "assistant",
-      "content": null,
       "tool_calls": [
         {
           "id": "call_02",
           "type": "function",
           "function": {
             "name": "search_menu",
-            "arguments": "{\"pizza\": \"pepperoni\"}"
+            "arguments": "{\"query\": \"pepperoni\"}"
           }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "call_02",
-      "content": "{\"found\": true, \"pizza\": \"pepperoni\", \"name\": \"Pepperoni\", \"prices\": {\"S\": 199, \"M\": 299, \"L\": 399}}"
-    },
-    {
-      "role": "assistant",
-      "content": null,
-      "tool_calls": [
+        },
         {
           "id": "call_03",
           "type": "function",
           "function": {
             "name": "search_menu",
-            "arguments": "{\"pizza\": \"veg_supreme\"}"
+            "arguments": "{\"query\": \"veg_supreme\"}"
           }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "call_03",
-      "content": "{\"found\": true, \"pizza\": \"veg_supreme\", \"name\": \"Veg Supreme\", \"prices\": {\"S\": 249, \"M\": 349, \"L\": 449}}"
-    },
-    {
-      "role": "assistant",
-      "content": null,
-      "tool_calls": [
+        },
         {
           "id": "call_04",
           "type": "function",
@@ -152,18 +129,7 @@
             "name": "check_stock",
             "arguments": "{\"pizza\": \"pepperoni\", \"size\": \"L\"}"
           }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "call_04",
-      "content": "{\"available\": true}"
-    },
-    {
-      "role": "assistant",
-      "content": null,
-      "tool_calls": [
+        },
         {
           "id": "call_05",
           "type": "function",
@@ -176,12 +142,26 @@
     },
     {
       "role": "tool",
+      "tool_call_id": "call_02",
+      "content": "{\"results\": [{\"id\": \"pepperoni\", \"name\": \"Pepperoni\", \"category\": \"non-veg\", \"prices\": {\"S\": 199, \"M\": 299, \"L\": 399}}]}"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_03",
+      "content": "{\"results\": [{\"id\": \"veg_supreme\", \"name\": \"Veg Supreme\", \"category\": \"veg\", \"prices\": {\"S\": 249, \"M\": 349, \"L\": 449}}]}"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_04",
+      "content": "{\"pizza\": \"pepperoni\", \"size\": \"L\", \"available\": true}"
+    },
+    {
+      "role": "tool",
       "tool_call_id": "call_05",
-      "content": "{\"available\": true}"
+      "content": "{\"pizza\": \"veg_supreme\", \"size\": \"M\", \"available\": true}"
     },
     {
       "role": "assistant",
-      "content": null,
       "tool_calls": [
         {
           "id": "call_06",
@@ -200,27 +180,15 @@
     },
     {
       "role": "assistant",
-      "content": null,
       "tool_calls": [
         {
           "id": "call_07",
           "type": "function",
           "function": {
             "name": "apply_coupon",
-            "arguments": "{\"code\": \"PIZZA20\", \"subtotal\": 1147}"
+            "arguments": "{\"code\": \"PIZZA20\"}"
           }
-        }
-      ]
-    },
-    {
-      "role": "tool",
-      "tool_call_id": "call_07",
-      "content": "{\"valid\": true, \"discount_pct\": 10, \"discount\": 115}"
-    },
-    {
-      "role": "assistant",
-      "content": null,
-      "tool_calls": [
+        },
         {
           "id": "call_08",
           "type": "function",
@@ -233,12 +201,16 @@
     },
     {
       "role": "tool",
+      "tool_call_id": "call_07",
+      "content": "{\"code\": \"PIZZA20\", \"type\": \"pct\", \"value\": 10, \"valid\": true, \"discount\": 114}"
+    },
+    {
+      "role": "tool",
       "tool_call_id": "call_08",
-      "content": "{\"deliverable\": true, \"delivery_fee\": 40}"
+      "content": "{\"area\": \"Andheri\", \"deliverable\": true, \"delivery_fee\": 40}"
     },
     {
       "role": "assistant",
-      "content": null,
       "tool_calls": [
         {
           "id": "call_09",
@@ -253,11 +225,10 @@
     {
       "role": "tool",
       "tool_call_id": "call_09",
-      "content": "{\"subtotal\": 1147, \"discount\": 115, \"delivery_fee\": 40, \"total\": 1072}"
+      "content": "{\"subtotal\": 1147, \"discount\": 114, \"delivery_fee\": 40, \"total\": 1073}"
     },
     {
       "role": "assistant",
-      "content": null,
       "tool_calls": [
         {
           "id": "call_10",
@@ -272,11 +243,7 @@
     {
       "role": "tool",
       "tool_call_id": "call_10",
-      "content": "{\"order_id\": \"ORD-58213\", \"status\": \"placed\", \"total\": 1072}"
-    },
-    {
-      "role": "assistant",
-      "content": "Your order ORD-58213 is placed. Total: Rs 1072 (PIZZA20 applied, Rs 115 off, Rs 40 delivery)."
+      "content": "{\"order_id\": \"ORD-63D154\", \"status\": \"placed\", \"items\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2, \"unit_price\": 399, \"line_total\": 798}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1, \"unit_price\": 349, \"line_total\": 349}], \"subtotal\": 1147, \"coupon\": \"PIZZA20\", \"discount\": 114, \"delivery_fee\": 40, \"total\": 1073}"
     }
   ],
   "steps": [
@@ -303,13 +270,17 @@
         "coupon": "PIZZA20",
         "area": "Andheri"
       },
+      "reads": [],
+      "writes": [
+        "parsed_order"
+      ],
       "uses": [],
       "llm": {
         "latency_ms": 612,
-        "tokens_in": 742,
+        "tokens_in": 1650,
         "tokens_out": 88
       },
-      "tool_latency_ms": 1,
+      "tool_latency_ms": 3,
       "error": null,
       "state_after": {
         "parsed_order": {
@@ -346,27 +317,37 @@
       "kind": "tool",
       "name": "search_menu",
       "input": {
-        "pizza": "pepperoni"
+        "query": "pepperoni"
       },
       "output": {
-        "found": true,
-        "pizza": "pepperoni",
-        "name": "Pepperoni",
-        "prices": {
-          "S": 199,
-          "M": 299,
-          "L": 399
-        }
+        "results": [
+          {
+            "id": "pepperoni",
+            "name": "Pepperoni",
+            "category": "non-veg",
+            "prices": {
+              "S": 199,
+              "M": 299,
+              "L": 399
+            }
+          }
+        ]
       },
+      "reads": [
+        "parsed_order"
+      ],
+      "writes": [
+        "menu:pepperoni"
+      ],
       "uses": [
         1
       ],
       "llm": {
-        "latency_ms": 388,
-        "tokens_in": 861,
-        "tokens_out": 24
+        "latency_ms": 701,
+        "tokens_in": 1790,
+        "tokens_out": 96
       },
-      "tool_latency_ms": 3,
+      "tool_latency_ms": 2,
       "error": null,
       "state_after": {
         "parsed_order": {
@@ -409,26 +390,32 @@
       "kind": "tool",
       "name": "search_menu",
       "input": {
-        "pizza": "veg_supreme"
+        "query": "veg_supreme"
       },
       "output": {
-        "found": true,
-        "pizza": "veg_supreme",
-        "name": "Veg Supreme",
-        "prices": {
-          "S": 249,
-          "M": 349,
-          "L": 449
-        }
+        "results": [
+          {
+            "id": "veg_supreme",
+            "name": "Veg Supreme",
+            "category": "veg",
+            "prices": {
+              "S": 249,
+              "M": 349,
+              "L": 449
+            }
+          }
+        ]
       },
+      "reads": [
+        "parsed_order"
+      ],
+      "writes": [
+        "menu:veg_supreme"
+      ],
       "uses": [
         1
       ],
-      "llm": {
-        "latency_ms": 402,
-        "tokens_in": 934,
-        "tokens_out": 25
-      },
+      "llm": null,
       "tool_latency_ms": 2,
       "error": null,
       "state_after": {
@@ -470,7 +457,7 @@
         "total": null,
         "order_id": null
       },
-      "msg_index": 8
+      "msg_index": 7
     },
     {
       "id": 4,
@@ -481,16 +468,20 @@
         "size": "L"
       },
       "output": {
+        "pizza": "pepperoni",
+        "size": "L",
         "available": true
       },
+      "reads": [
+        "parsed_order"
+      ],
+      "writes": [
+        "stock:pepperoni:L"
+      ],
       "uses": [
         1
       ],
-      "llm": {
-        "latency_ms": 371,
-        "tokens_in": 1012,
-        "tokens_out": 27
-      },
+      "llm": null,
       "tool_latency_ms": 2,
       "error": null,
       "state_after": {
@@ -534,7 +525,7 @@
         "total": null,
         "order_id": null
       },
-      "msg_index": 10
+      "msg_index": 8
     },
     {
       "id": 5,
@@ -545,16 +536,20 @@
         "size": "M"
       },
       "output": {
+        "pizza": "veg_supreme",
+        "size": "M",
         "available": true
       },
+      "reads": [
+        "parsed_order"
+      ],
+      "writes": [
+        "stock:veg_supreme:M"
+      ],
       "uses": [
         1
       ],
-      "llm": {
-        "latency_ms": 365,
-        "tokens_in": 1063,
-        "tokens_out": 28
-      },
+      "llm": null,
       "tool_latency_ms": 2,
       "error": null,
       "state_after": {
@@ -599,7 +594,7 @@
         "total": null,
         "order_id": null
       },
-      "msg_index": 12
+      "msg_index": 9
     },
     {
       "id": 6,
@@ -638,6 +633,18 @@
         ],
         "subtotal": 1147
       },
+      "reads": [
+        "parsed_order",
+        "cart",
+        "menu:pepperoni",
+        "stock:pepperoni:L",
+        "menu:veg_supreme",
+        "stock:veg_supreme:M"
+      ],
+      "writes": [
+        "cart",
+        "subtotal"
+      ],
       "uses": [
         1,
         2,
@@ -647,171 +654,8 @@
       ],
       "llm": {
         "latency_ms": 455,
-        "tokens_in": 1121,
+        "tokens_in": 2240,
         "tokens_out": 61
-      },
-      "tool_latency_ms": 4,
-      "error": null,
-      "state_after": {
-        "parsed_order": {
-          "items": [
-            {
-              "pizza": "pepperoni",
-              "size": "L",
-              "qty": 2
-            },
-            {
-              "pizza": "veg_supreme",
-              "size": "M",
-              "qty": 1
-            }
-          ],
-          "coupon": "PIZZA20",
-          "area": "Andheri"
-        },
-        "menu": {
-          "pepperoni": {
-            "S": 199,
-            "M": 299,
-            "L": 399
-          },
-          "veg_supreme": {
-            "S": 249,
-            "M": 349,
-            "L": 449
-          }
-        },
-        "stock": {
-          "pepperoni:L": true,
-          "veg_supreme:M": true
-        },
-        "cart": [
-          {
-            "pizza": "pepperoni",
-            "size": "L",
-            "qty": 2,
-            "unit_price": 399,
-            "line_total": 798
-          },
-          {
-            "pizza": "veg_supreme",
-            "size": "M",
-            "qty": 1,
-            "unit_price": 349,
-            "line_total": 349
-          }
-        ],
-        "subtotal": 1147,
-        "coupon": null,
-        "discount": null,
-        "deliverable": null,
-        "delivery_fee": null,
-        "total": null,
-        "order_id": null
-      },
-      "msg_index": 14
-    },
-    {
-      "id": 7,
-      "kind": "tool",
-      "name": "apply_coupon",
-      "input": {
-        "code": "PIZZA20",
-        "subtotal": 1147
-      },
-      "output": {
-        "valid": true,
-        "discount_pct": 10,
-        "discount": 115
-      },
-      "uses": [
-        1,
-        6
-      ],
-      "llm": {
-        "latency_ms": 420,
-        "tokens_in": 1240,
-        "tokens_out": 41
-      },
-      "tool_latency_ms": 8,
-      "error": null,
-      "state_after": {
-        "parsed_order": {
-          "items": [
-            {
-              "pizza": "pepperoni",
-              "size": "L",
-              "qty": 2
-            },
-            {
-              "pizza": "veg_supreme",
-              "size": "M",
-              "qty": 1
-            }
-          ],
-          "coupon": "PIZZA20",
-          "area": "Andheri"
-        },
-        "menu": {
-          "pepperoni": {
-            "S": 199,
-            "M": 299,
-            "L": 399
-          },
-          "veg_supreme": {
-            "S": 249,
-            "M": 349,
-            "L": 449
-          }
-        },
-        "stock": {
-          "pepperoni:L": true,
-          "veg_supreme:M": true
-        },
-        "cart": [
-          {
-            "pizza": "pepperoni",
-            "size": "L",
-            "qty": 2,
-            "unit_price": 399,
-            "line_total": 798
-          },
-          {
-            "pizza": "veg_supreme",
-            "size": "M",
-            "qty": 1,
-            "unit_price": 349,
-            "line_total": 349
-          }
-        ],
-        "subtotal": 1147,
-        "coupon": "PIZZA20",
-        "discount": 115,
-        "deliverable": null,
-        "delivery_fee": null,
-        "total": null,
-        "order_id": null
-      },
-      "msg_index": 16
-    },
-    {
-      "id": 8,
-      "kind": "tool",
-      "name": "check_delivery",
-      "input": {
-        "area": "Andheri"
-      },
-      "output": {
-        "deliverable": true,
-        "delivery_fee": 40
-      },
-      "uses": [
-        1
-      ],
-      "llm": {
-        "latency_ms": 391,
-        "tokens_in": 1302,
-        "tokens_out": 22
       },
       "tool_latency_ms": 3,
       "error": null,
@@ -865,117 +709,45 @@
           }
         ],
         "subtotal": 1147,
-        "coupon": "PIZZA20",
-        "discount": 115,
-        "deliverable": true,
-        "delivery_fee": 40,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
         "total": null,
         "order_id": null
       },
-      "msg_index": 18
+      "msg_index": 11
     },
     {
-      "id": 9,
+      "id": 7,
       "kind": "tool",
-      "name": "calculate_total",
-      "input": {},
-      "output": {
-        "subtotal": 1147,
-        "discount": 115,
-        "delivery_fee": 40,
-        "total": 1072
+      "name": "apply_coupon",
+      "input": {
+        "code": "PIZZA20"
       },
+      "output": {
+        "code": "PIZZA20",
+        "type": "pct",
+        "value": 10,
+        "valid": true,
+        "discount": 114
+      },
+      "reads": [
+        "parsed_order",
+        "subtotal"
+      ],
+      "writes": [
+        "coupon",
+        "discount"
+      ],
       "uses": [
-        6,
-        7,
-        8
+        1,
+        6
       ],
       "llm": {
-        "latency_ms": 377,
-        "tokens_in": 1358,
-        "tokens_out": 16
-      },
-      "tool_latency_ms": 2,
-      "error": null,
-      "state_after": {
-        "parsed_order": {
-          "items": [
-            {
-              "pizza": "pepperoni",
-              "size": "L",
-              "qty": 2
-            },
-            {
-              "pizza": "veg_supreme",
-              "size": "M",
-              "qty": 1
-            }
-          ],
-          "coupon": "PIZZA20",
-          "area": "Andheri"
-        },
-        "menu": {
-          "pepperoni": {
-            "S": 199,
-            "M": 299,
-            "L": 399
-          },
-          "veg_supreme": {
-            "S": 249,
-            "M": 349,
-            "L": 449
-          }
-        },
-        "stock": {
-          "pepperoni:L": true,
-          "veg_supreme:M": true
-        },
-        "cart": [
-          {
-            "pizza": "pepperoni",
-            "size": "L",
-            "qty": 2,
-            "unit_price": 399,
-            "line_total": 798
-          },
-          {
-            "pizza": "veg_supreme",
-            "size": "M",
-            "qty": 1,
-            "unit_price": 349,
-            "line_total": 349
-          }
-        ],
-        "subtotal": 1147,
-        "coupon": "PIZZA20",
-        "discount": 115,
-        "deliverable": true,
-        "delivery_fee": 40,
-        "total": 1072,
-        "order_id": null
-      },
-      "msg_index": 20
-    },
-    {
-      "id": 10,
-      "kind": "tool",
-      "name": "place_order",
-      "input": {},
-      "output": {
-        "order_id": "ORD-58213",
-        "status": "placed",
-        "total": 1072
-      },
-      "uses": [
-        6,
-        7,
-        8,
-        9
-      ],
-      "llm": {
-        "latency_ms": 409,
-        "tokens_in": 1421,
-        "tokens_out": 14
+        "latency_ms": 420,
+        "tokens_in": 2410,
+        "tokens_out": 48
       },
       "tool_latency_ms": 5,
       "error": null,
@@ -1030,13 +802,302 @@
         ],
         "subtotal": 1147,
         "coupon": "PIZZA20",
-        "discount": 115,
+        "discount": 114,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 13
+    },
+    {
+      "id": 8,
+      "kind": "tool",
+      "name": "check_delivery",
+      "input": {
+        "area": "Andheri"
+      },
+      "output": {
+        "area": "Andheri",
+        "deliverable": true,
+        "delivery_fee": 40
+      },
+      "reads": [
+        "parsed_order"
+      ],
+      "writes": [
+        "deliverable",
+        "delivery_fee"
+      ],
+      "uses": [
+        1
+      ],
+      "llm": null,
+      "tool_latency_ms": 5,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Andheri"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 114,
         "deliverable": true,
         "delivery_fee": 40,
-        "total": 1072,
-        "order_id": "ORD-58213"
+        "total": null,
+        "order_id": null
       },
-      "msg_index": 22
+      "msg_index": 14
+    },
+    {
+      "id": 9,
+      "kind": "tool",
+      "name": "calculate_total",
+      "input": {},
+      "output": {
+        "subtotal": 1147,
+        "discount": 114,
+        "delivery_fee": 40,
+        "total": 1073
+      },
+      "reads": [
+        "cart",
+        "subtotal",
+        "discount",
+        "delivery_fee"
+      ],
+      "writes": [
+        "total"
+      ],
+      "uses": [
+        6,
+        7,
+        8
+      ],
+      "llm": {
+        "latency_ms": 377,
+        "tokens_in": 2620,
+        "tokens_out": 16
+      },
+      "tool_latency_ms": 6,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Andheri"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 114,
+        "deliverable": true,
+        "delivery_fee": 40,
+        "total": 1073,
+        "order_id": null
+      },
+      "msg_index": 16
+    },
+    {
+      "id": 10,
+      "kind": "tool",
+      "name": "place_order",
+      "input": {},
+      "output": {
+        "order_id": "ORD-63D154",
+        "status": "placed",
+        "items": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 114,
+        "delivery_fee": 40,
+        "total": 1073
+      },
+      "reads": [
+        "cart",
+        "subtotal",
+        "coupon",
+        "discount",
+        "deliverable",
+        "delivery_fee",
+        "total"
+      ],
+      "writes": [
+        "order_id"
+      ],
+      "uses": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "llm": {
+        "latency_ms": 409,
+        "tokens_in": 2730,
+        "tokens_out": 14
+      },
+      "tool_latency_ms": 2,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Andheri"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 114,
+        "deliverable": true,
+        "delivery_fee": 40,
+        "total": 1073,
+        "order_id": "ORD-63D154"
+      },
+      "msg_index": 18
     }
   ]
 }

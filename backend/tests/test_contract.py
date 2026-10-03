@@ -1,5 +1,6 @@
 import json
 
+from agents.pizza.contract import Order, OrderResult
 from blackbox import config
 from blackbox.contract import Diagnosis, Run
 
@@ -13,7 +14,15 @@ def test_sample_run_matches_contract():
     assert [s.id for s in run.steps] == list(range(1, len(run.steps) + 1))
     for step in run.steps:
         assert all(u < step.id for u in step.uses)
-        assert step.msg_index <= len(run.messages)
+        assert run.messages[step.msg_index - 1]["role"] == "tool"
+
+
+def test_sample_run_matches_pizza_shapes():
+    run = load("sample_run.json")
+    assert run["agent"] == "pizza"
+    Order.model_validate(run["task"])
+    OrderResult.model_validate(run["expected"])
+    OrderResult.model_validate(run["actual"])
 
 
 def test_sample_diagnosis_matches_contract():

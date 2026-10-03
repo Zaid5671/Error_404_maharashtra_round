@@ -1,6 +1,6 @@
 """P0 check: the API key works, one tool call succeeds, and the rate limits are printed.
 
-Run with: python -m blackbox.check_llm
+Run with: python -m agents.check_llm
 """
 
 import json
@@ -8,7 +8,7 @@ import time
 
 from openai import OpenAI
 
-from blackbox import config
+from agents import config
 
 TOOLS = [{
     "type": "function",

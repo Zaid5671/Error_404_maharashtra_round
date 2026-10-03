@@ -12,7 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from blackbox import shop
+from agents.pizza import shop
 
 State = dict[str, Any]
 

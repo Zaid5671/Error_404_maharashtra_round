@@ -1,4 +1,7 @@
-"""The data contract (plan.md section 6) as pydantic models.
+"""The Black Box trace format and API shapes (plan.md section 6). Nothing here is specific to one agent.
+
+`task`, `expected` and `actual` are opaque to the Black Box: each agent defines their shape
+(the pizza agent's are in agents/pizza/contract.py).
 
 Any change here must also be made in frontend/src/types/contract.ts and plan.md section 6.
 """
@@ -7,18 +10,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-Size = Literal["S", "M", "L"]
 StepKind = Literal["llm", "tool"]
 FaultFamily = Literal["tool", "llm"]
-FaultType = Literal[
-    "wrong_price",
-    "stock_lie",
-    "wrong_cart_line",
-    "wrong_discount",
-    "wrong_delivery",
-    "llm_misread",
-    "llm_wrong_choice",
-]
+Outcome = Literal["success", "failure"]
 
 
 class Model(BaseModel):
@@ -26,32 +20,6 @@ class Model(BaseModel):
 
 
 # --- Run ---------------------------------------------------------------------
-
-
-class OrderItem(Model):
-    pizza: str
-    size: Size
-    qty: int
-
-
-class Order(Model):
-    items: list[OrderItem]
-    coupon: str | None
-    area: str
-
-
-class ResultItem(OrderItem):
-    unit_price: int
-    line_total: int
-
-
-class OrderResult(Model):
-    items: list[ResultItem]
-    subtotal: int
-    coupon: str | None
-    discount: int
-    delivery_fee: int
-    total: int
 
 
 class StepLLM(Model):
@@ -66,7 +34,9 @@ class Step(Model):
     name: str
     input: dict[str, Any]
     output: dict[str, Any]
-    uses: list[int]
+    reads: list[str]  # state keys this step read
+    writes: list[str]  # state keys this step wrote (empty when it errored)
+    uses: list[int]  # earlier steps that last wrote the keys in `reads` = graph arrows
     llm: StepLLM | None
     tool_latency_ms: int
     error: str | None
@@ -75,7 +45,7 @@ class Step(Model):
 
 
 class Fault(Model):
-    type: FaultType
+    type: str  # agent-defined, e.g. "wrong_discount"
     family: FaultFamily
     step_id: int
     detail: str
@@ -83,15 +53,16 @@ class Fault(Model):
 
 class Run(Model):
     run_id: str
+    agent: str  # which agent produced this run, e.g. "pizza"
     template_id: str
     source: Literal["generated", "live", "replay"]
     parent_run_id: str | None
     replayed_from_step: int | None
-    order: Order
+    task: dict[str, Any]  # the agent's structured input
     request_text: str
-    expected: OrderResult | None  # None: the correct behaviour is to place no order
-    actual: OrderResult | None
-    outcome: Literal["success", "failure"]
+    expected: dict[str, Any] | None  # agent-defined correct result; None = correct behaviour is to do nothing
+    actual: dict[str, Any] | None
+    outcome: Outcome
     fault: Fault | None
     split: Literal["train", "test"] | None
     messages: list[dict[str, Any]]
@@ -135,11 +106,12 @@ class Baseline(Model):
 
 
 class FaultTypes(Model):
-    seen: list[FaultType]
-    unseen: list[FaultType]
+    seen: list[str]
+    unseen: list[str]
 
 
 class Report(Model):
+    agent: str
     n_train_runs: int
     n_test_runs: int
     overall: Accuracy
@@ -149,37 +121,12 @@ class Report(Model):
     fault_types: FaultTypes
 
 
-# --- Catalog -----------------------------------------------------------------
-
-
-class CatalogPizza(Model):
-    id: str
-    name: str
-    prices: dict[Size, int]
-
-
-class CatalogCoupon(Model):
-    code: str
-    label: str
-
-
-class CatalogArea(Model):
-    name: str
-    deliverable: bool
-
-
-class Catalog(Model):
-    pizzas: list[CatalogPizza]
-    sizes: list[Size]
-    coupons: list[CatalogCoupon]
-    areas: list[CatalogArea]
-
-
 # --- API request bodies --------------------------------------------------------
 
 
 class RunRequest(Model):
-    order: Order
+    agent: str
+    task: dict[str, Any]
     fault_mode: Literal["none", "surprise"]
 
 
@@ -211,9 +158,9 @@ class StepReusedEvent(Model):
 
 class RunDoneEvent(Model):
     run_id: str
-    outcome: Literal["success", "failure"]
-    actual: OrderResult | None
-    expected: OrderResult | None
+    outcome: Outcome
+    actual: dict[str, Any] | None
+    expected: dict[str, Any] | None
 
 
 class ErrorEvent(Model):

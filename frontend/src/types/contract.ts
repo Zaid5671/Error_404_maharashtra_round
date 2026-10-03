@@ -1,46 +1,13 @@
-// The data contract (plan.md section 6).
+// The Black Box trace format and API shapes (plan.md section 6). Nothing here is specific to one agent.
+// `task`, `expected` and `actual` are agent-defined (the pizza agent's shapes are in ./pizza.ts).
 // Any change here must also be made in backend/blackbox/contract.py and plan.md section 6.
 
-export type Size = 'S' | 'M' | 'L'
 export type StepKind = 'llm' | 'tool'
 export type FaultFamily = 'tool' | 'llm'
-export type FaultType =
-  | 'wrong_price'
-  | 'stock_lie'
-  | 'wrong_cart_line'
-  | 'wrong_discount'
-  | 'wrong_delivery'
-  | 'llm_misread'
-  | 'llm_wrong_choice'
 export type Outcome = 'success' | 'failure'
+type Json = Record<string, unknown>
 
 // --- Run ---------------------------------------------------------------------
-
-export interface OrderItem {
-  pizza: string
-  size: Size
-  qty: number
-}
-
-export interface Order {
-  items: OrderItem[]
-  coupon: string | null
-  area: string
-}
-
-export interface ResultItem extends OrderItem {
-  unit_price: number
-  line_total: number
-}
-
-export interface OrderResult {
-  items: ResultItem[]
-  subtotal: number
-  coupon: string | null
-  discount: number
-  delivery_fee: number
-  total: number
-}
 
 export interface StepLLM {
   latency_ms: number
@@ -52,18 +19,20 @@ export interface Step {
   id: number
   kind: StepKind
   name: string
-  input: Record<string, unknown>
-  output: Record<string, unknown>
-  uses: number[]
+  input: Json
+  output: Json
+  reads: string[] // state keys this step read
+  writes: string[] // state keys this step wrote (empty when it errored)
+  uses: number[] // earlier steps that last wrote the keys in `reads` = graph arrows
   llm: StepLLM | null
   tool_latency_ms: number
   error: string | null
-  state_after: Record<string, unknown>
+  state_after: Json
   msg_index: number
 }
 
 export interface Fault {
-  type: FaultType
+  type: string // agent-defined, e.g. "wrong_discount"
   family: FaultFamily
   step_id: number
   detail: string
@@ -71,18 +40,19 @@ export interface Fault {
 
 export interface Run {
   run_id: string
+  agent: string
   template_id: string
   source: 'generated' | 'live' | 'replay'
   parent_run_id: string | null
   replayed_from_step: number | null
-  order: Order
+  task: Json
   request_text: string
-  expected: OrderResult | null // null: the correct behaviour is to place no order
-  actual: OrderResult | null
+  expected: Json | null // null: the correct behaviour is to do nothing
+  actual: Json | null
   outcome: Outcome
   fault: Fault | null
   split: 'train' | 'test' | null
-  messages: Record<string, unknown>[]
+  messages: Json[]
   steps: Step[]
 }
 
@@ -116,28 +86,21 @@ export interface SplitAccuracy extends Accuracy {
 }
 
 export interface Report {
+  agent: string
   n_train_runs: number
   n_test_runs: number
   overall: Accuracy
   seen: SplitAccuracy
   unseen: SplitAccuracy
   baselines: { name: string; top1: number }[]
-  fault_types: { seen: FaultType[]; unseen: FaultType[] }
-}
-
-// --- Catalog -----------------------------------------------------------------
-
-export interface Catalog {
-  pizzas: { id: string; name: string; prices: Partial<Record<Size, number>> }[]
-  sizes: Size[]
-  coupons: { code: string; label: string }[]
-  areas: { name: string; deliverable: boolean }[]
+  fault_types: { seen: string[]; unseen: string[] }
 }
 
 // --- API request bodies --------------------------------------------------------
 
 export interface RunRequest {
-  order: Order
+  agent: string
+  task: Json
   fault_mode: 'none' | 'surprise'
 }
 
@@ -148,7 +111,7 @@ export interface DiagnoseRequest {
 export interface ReplayRequest {
   run_id: string
   step_id: number
-  new_output: Record<string, unknown>
+  new_output: Json
 }
 
 // --- SSE events --------------------------------------------------------------
@@ -157,5 +120,5 @@ export type RunEvent =
   | { event: 'step_started'; data: { id: number; name: string } }
   | { event: 'step_done'; data: { step: Step } }
   | { event: 'step_reused'; data: { id: number } }
-  | { event: 'run_done'; data: { run_id: string; outcome: Outcome; actual: OrderResult | null; expected: OrderResult | null } }
+  | { event: 'run_done'; data: { run_id: string; outcome: Outcome; actual: Json | null; expected: Json | null } }
   | { event: 'error'; data: { message: string } }

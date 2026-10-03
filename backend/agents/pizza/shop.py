@@ -2,12 +2,14 @@
 
 import json
 from datetime import date
+from pathlib import Path
 
-from blackbox import config
+DATA_DIR = Path(__file__).resolve().parent / "data"
+SHOP_DATE = date(2026, 10, 3)  # fixed, so coupon expiry never depends on the day we run
 
 
 def _load(name: str):
-    return json.loads((config.DATA_DIR / name).read_text(encoding="utf-8"))
+    return json.loads((DATA_DIR / name).read_text(encoding="utf-8"))
 
 
 MENU: dict[str, dict] = {p["id"]: p for p in _load("menu.json")}
@@ -16,7 +18,6 @@ COUPONS: dict[str, dict] = {c["code"]: c for c in _load("coupons.json")}
 ZONES: dict[str, dict] = {z["name"].lower(): z for z in _load("zones.json")}
 SIZES = ["S", "M", "L"]
 SIZE_WORDS = {"S": "small", "M": "medium", "L": "large"}
-SHOP_DATE = date.fromisoformat(config.SHOP_DATE)
 
 
 def normalize_pizza(text: str) -> str | None:

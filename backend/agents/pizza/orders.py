@@ -1,4 +1,4 @@
-"""Order templates -> {template_id, seed, order, request_text, expected}.
+"""Order templates -> {template_id, seed, task, request_text, expected} (task = the customer's order).
 
 A template fixes the scenario (coupon given or not, forced out-of-stock items, area, subtotal band).
 The seed picks the concrete items and the wording, so (template_id, seed) is always the same order.
@@ -7,8 +7,8 @@ The seed picks the concrete items and the wording, so (template_id, seed) is alw
 import random
 from dataclasses import dataclass, field
 
-from blackbox import shop
-from blackbox.solver import solve
+from agents.pizza import shop
+from agents.pizza.solver import solve
 
 DELIVERABLE = [z["name"] for z in shop.ZONES.values() if z["deliverable"]]
 UNDELIVERABLE = [z["name"] for z in shop.ZONES.values() if not z["deliverable"]]
@@ -109,7 +109,7 @@ def generate(template_id: str, seed: int) -> dict:
             return {
                 "template_id": template_id,
                 "seed": seed,
-                "order": order,
+                "task": order,
                 "request_text": request_text(rng, order),
                 "expected": solved["expected"],
             }
