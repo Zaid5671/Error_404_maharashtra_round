@@ -1,6 +1,11 @@
 """Plugs the pizza agent into the Black Box (implements blackbox.adapter.AgentAdapter)."""
 
-from agents.pizza import agent, faults, orders, solver
+import random
+
+from pydantic import ValidationError
+
+from agents.pizza import agent, faults, orders, shop, solver
+from agents.pizza.contract import Catalog, Order
 from blackbox.adapter import EventFn, FaultSpec
 from blackbox.recorder import OutputHook
 
@@ -16,6 +21,34 @@ class PizzaAdapter:
 
     def faults(self) -> list[FaultSpec]:
         return faults.FAULTS
+
+    def task_from_input(self, task: dict) -> dict:
+        try:
+            order = Order.model_validate(task).model_dump()
+        except ValidationError as e:
+            raise ValueError(f"invalid order: {e.errors()[0]['msg']}") from e
+        if not order["items"]:
+            raise ValueError("invalid order: add at least one pizza")
+        for item in order["items"]:
+            if item["pizza"] not in shop.MENU:
+                raise ValueError(f"invalid order: unknown pizza '{item['pizza']}'")
+            if not 1 <= item["qty"] <= 9:
+                raise ValueError("invalid order: quantity must be 1-9")
+        return {
+            "template_id": "live",
+            "seed": None,
+            "task": order,
+            "request_text": orders.request_text(random.Random(), order),
+            "expected": solver.solve(order)["expected"],
+        }
+
+    def form_data(self) -> dict:
+        return Catalog(
+            pizzas=[{"id": p["id"], "name": p["name"], "prices": p["prices"]} for p in shop.MENU.values()],
+            sizes=shop.SIZES,
+            coupons=[{"code": c["code"], "label": c["label"]} for c in shop.COUPONS.values()],
+            areas=[{"name": z["name"], "deliverable": z["deliverable"]} for z in shop.ZONES.values()],
+        ).model_dump()
 
     def run(
         self,

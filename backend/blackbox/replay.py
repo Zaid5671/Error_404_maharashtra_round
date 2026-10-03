@@ -11,28 +11,54 @@ class ReplayError(ValueError):
     pass
 
 
-def replay(agent: str, run_id: str, step_id: int, new_output: dict, on_event: EventFn | None = None) -> dict:
-    """Replay `run_id` with `new_output` for tool step `step_id`. Saves and returns the new run.
+def new_replay_id(run_id: str) -> str:
+    return f"{run_id}__replay_{uuid.uuid4().hex[:6]}"
+
+
+def check_edit(original: dict, step_id: int, new_output: dict) -> dict:
+    """The step being edited. Raises ReplayError when the edit can't be replayed."""
+    if not 1 <= step_id <= len(original["steps"]):
+        raise ReplayError(f"run {original['run_id']} has no step {step_id}")
+    step = original["steps"][step_id - 1]
+    if not isinstance(new_output, dict):
+        raise ReplayError("the edited output must be an object")
+    old = step["output"] if isinstance(step["output"], dict) else {}
+    if set(new_output) != set(old):
+        missing, extra = sorted(set(old) - set(new_output)), sorted(set(new_output) - set(old))
+        raise ReplayError(f"the edit must keep the step's fields (missing {missing}, unexpected {extra})")
+    return step
+
+
+def replay(
+    agent: str,
+    run_id: str,
+    step_id: int,
+    new_output: dict,
+    on_event: EventFn | None = None,
+    *,
+    new_run_id: str | None = None,
+) -> dict:
+    """Replay `run_id` with `new_output` for step `step_id`. Saves and returns the new run.
 
     Emits step_reused for every earlier step (taken from the checkpoint, not re-run), then the
-    agent streams the re-run steps. Replays never inject faults.
+    agent streams the re-run steps. For a tool step the edit replaces the tool's output; for an LLM
+    step it replaces the values the LLM chose (its tool-call arguments), so a misread can be fixed.
+    Replays never inject faults.
     """
     adapter = get_agent(agent)
     original = store.load_run(agent, run_id)
-    if not 1 <= step_id <= len(original["steps"]):
-        raise ReplayError(f"run {run_id} has no step {step_id}")
-    if original["steps"][step_id - 1]["kind"] != "tool":
-        raise ReplayError("only tool steps can be edited")
+    step = check_edit(original, step_id, new_output)
 
     if on_event:
-        for step in original["steps"][: step_id - 1]:
-            on_event("step_reused", {"id": step["id"]})
+        for earlier in original["steps"][: step_id - 1]:
+            on_event("step_reused", {"id": earlier["id"]})
+    edit = {"new_args": new_output} if step["kind"] == "llm" else {"new_output": new_output}
     new_run = adapter.resume(
         original, step_id,
-        run_id=f"{run_id}__replay_{uuid.uuid4().hex[:6]}",
+        run_id=new_run_id or new_replay_id(run_id),
         source="replay",
-        new_output=new_output,
         on_event=on_event,
+        **edit,
     )
     new_run["fault"] = None
     store.save_run(new_run)

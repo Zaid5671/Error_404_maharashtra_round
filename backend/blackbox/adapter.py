@@ -48,6 +48,18 @@ class AgentAdapter(Protocol):
         """The agent's fault catalogue."""
         ...
 
+    def task_from_input(self, task: dict) -> dict:
+        """A task typed into the UI form -> {template_id, seed, task, request_text, expected}.
+
+        Writes the request sentence the LLM will read and works out the expected result, so a live
+        run can be judged. Raises ValueError for an invalid task.
+        """
+        ...
+
+    def form_data(self) -> dict:
+        """What the UI form needs to build a task (pizza: the Catalog). Served by GET /catalog/{agent}."""
+        ...
+
     def run(
         self,
         task: dict,

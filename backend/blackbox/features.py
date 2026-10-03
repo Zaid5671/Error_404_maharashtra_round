@@ -200,8 +200,12 @@ def _fmt(v: str) -> str:
 
 
 def _ctx_text(ctx_key: str) -> str:
-    pairs = dict.fromkeys(f"{p.split('.')[-1]}={v}" for p, v in json.loads(ctx_key))
-    return ", ".join(pairs) or "no inputs"
+    seen, pairs = set(), []
+    for p, v in json.loads(ctx_key):  # one mention per value: query=x and id=x say the same thing
+        if v not in seen:
+            seen.add(v)
+            pairs.append(f"{p.split('.')[-1]}={v}")
+    return ", ".join(pairs[:3]) or "no inputs"
 
 
 def check_step(v: StepView, norms: dict, words: set[str], sources: list[dict]) -> tuple[dict, list[tuple[str, str]]]:

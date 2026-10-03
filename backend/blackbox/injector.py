@@ -8,6 +8,7 @@ reused, not re-run), and records the fault label.
 import random
 
 from blackbox.adapter import AgentAdapter, FaultSpec
+from blackbox.recorder import OutputHook
 
 
 def candidates(adapter: AgentAdapter, run: dict, rng: random.Random, family: str) -> list[tuple[FaultSpec, dict, dict]]:
@@ -59,3 +60,41 @@ def inject(
     )
     faulted["fault"] = {"type": spec.type, "family": spec.family, "step_id": step["id"], "detail": change["detail"]}
     return faulted
+
+
+def live_fault(
+    adapter: AgentAdapter,
+    task: dict,
+    steps: list[dict],
+    rng: random.Random,
+    *,
+    family: str = "tool",
+    other_chance: float = 0.5,
+) -> tuple[OutputHook, dict]:
+    """A hidden fault for a live run ("Surprise me"), applied while the run streams.
+
+    Returns (output_hook, fault). `steps` must be kept up to date by the caller (the steps
+    finished so far), because fault makers look at earlier steps. One fault type is preferred,
+    picked at random; a step where another type applies gets that one with `other_chance`, so a
+    fault almost always lands. `fault` is filled in when it does ({type, family, step_id, detail}).
+    """
+    specs = [s for s in adapter.faults() if s.family == family]
+    preferred = rng.choice(sorted({s.type for s in specs}))
+    fault: dict = {}
+
+    def hook(step_id: int, name: str, args: dict, output: dict) -> dict:
+        if fault or not isinstance(output, dict) or "error" in output:
+            return output
+        run = {"steps": steps, "task": task["task"], "request_text": task["request_text"], "expected": task["expected"]}
+        step = {"id": step_id, "name": name, "input": args, "output": output, "error": None}
+        matching = sorted((s for s in specs if s.step_name == name), key=lambda s: s.type != preferred)
+        for spec in matching:
+            if spec.type != preferred and rng.random() >= other_chance:
+                continue
+            change = spec.make(run, step, rng)
+            if change and "output" in change:
+                fault.update(type=spec.type, family=spec.family, step_id=step_id, detail=change["detail"])
+                return change["output"]
+        return output
+
+    return hook, fault

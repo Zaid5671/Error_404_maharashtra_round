@@ -38,7 +38,10 @@ ROUNDS = 200
 
 
 def load_runs(agent: str) -> list[dict]:
-    return [json.loads(p.read_text(encoding="utf-8")) for p in list_runs(agent)]
+    """The generator's runs only. Live runs and replays live in the same folder, and a replay of a
+    training run even keeps its split, so they must never reach training or evaluation."""
+    runs = (json.loads(p.read_text(encoding="utf-8")) for p in list_runs(agent))
+    return [r for r in runs if r["source"] == "generated"]
 
 
 def is_case(run: dict) -> bool:
