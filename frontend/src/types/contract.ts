@@ -92,7 +92,6 @@ export interface Report {
   overall: Accuracy
   seen: SplitAccuracy
   unseen: SplitAccuracy
-  baselines: { name: string; top1: number }[]
   fault_types: { seen: string[]; unseen: string[] }
 }
 

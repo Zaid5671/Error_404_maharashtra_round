@@ -100,11 +100,6 @@ class SplitAccuracy(Accuracy):
     n: int
 
 
-class Baseline(Model):
-    name: str
-    top1: float
-
-
 class FaultTypes(Model):
     seen: list[str]
     unseen: list[str]
@@ -117,7 +112,6 @@ class Report(Model):
     overall: Accuracy
     seen: SplitAccuracy
     unseen: SplitAccuracy
-    baselines: list[Baseline]
     fault_types: FaultTypes
 
 
