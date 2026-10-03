@@ -1,13 +1,38 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource/archivo/500.css";
+@import "@fontsource/archivo/700.css";
+@import "@fontsource/archivo/800.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* Black Box tokens: recorder orange (flight recorders are painted orange), cool slate neutrals,
+   semantic good/bad, violet for LLM decisions. Dark mode is the .dark class on <html> (see lib/theme.ts). */
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-heading: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --color-recorder: var(--recorder);
+    --color-recorder-ink: var(--recorder-ink);
+    --color-recorder-soft: var(--recorder-soft);
+    --color-good: var(--good);
+    --color-good-soft: var(--good-soft);
+    --color-bad: var(--bad);
+    --color-bad-soft: var(--bad-soft);
+    --color-llm: var(--llm);
+    --color-llm-soft: var(--llm-soft);
+    --color-sunk: var(--sunk);
+    --color-band: var(--band);
+
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,82 +74,128 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --recorder: #e8590c;
+    --recorder-ink: #b8430a;
+    --recorder-soft: #fde7da;
+    --good: #157a3c;
+    --good-soft: #dcf3e4;
+    --bad: #c3261e;
+    --bad-soft: #fbe2e0;
+    --llm: #5b45d6;
+    --llm-soft: #ebe7fd;
+    --sunk: #f6f8fa;
+    --band: #f2f4f8;
+
+    --background: #eef1f5;
+    --foreground: #141820;
+    --card: #ffffff;
+    --card-foreground: #141820;
+    --popover: #ffffff;
+    --popover-foreground: #141820;
+    --primary: #141820;
+    --primary-foreground: #eef1f5;
+    --secondary: #f6f8fa;
+    --secondary-foreground: #141820;
+    --muted: #f6f8fa;
+    --muted-foreground: #5a6474;
+    --accent: #f2f4f8;
+    --accent-foreground: #141820;
+    --destructive: #c3261e;
+    --border: #d9dee6;
+    --input: #d9dee6;
+    --ring: #e8590c;
+    --chart-1: #e8590c;
+    --chart-2: #5b45d6;
+    --chart-3: #157a3c;
+    --chart-4: #5a6474;
+    --chart-5: #c3261e;
+    --radius: 0.5rem;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #141820;
+    --sidebar-primary: #141820;
+    --sidebar-primary-foreground: #eef1f5;
+    --sidebar-accent: #f2f4f8;
+    --sidebar-accent-foreground: #141820;
+    --sidebar-border: #d9dee6;
+    --sidebar-ring: #e8590c;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --recorder: #ff7a2f;
+    --recorder-ink: #ff9a5c;
+    --recorder-soft: #3a2316;
+    --good: #3ccf78;
+    --good-soft: #153222;
+    --bad: #ff6159;
+    --bad-soft: #3a1917;
+    --llm: #a596ff;
+    --llm-soft: #251f45;
+    --sunk: #11151b;
+    --band: #13171d;
+
+    --background: #0e1116;
+    --foreground: #e5e9f0;
+    --card: #161a21;
+    --card-foreground: #e5e9f0;
+    --popover: #161a21;
+    --popover-foreground: #e5e9f0;
+    --primary: #e5e9f0;
+    --primary-foreground: #0e1116;
+    --secondary: #11151b;
+    --secondary-foreground: #e5e9f0;
+    --muted: #11151b;
+    --muted-foreground: #96a0b0;
+    --accent: #1c212a;
+    --accent-foreground: #e5e9f0;
+    --destructive: #ff6159;
+    --border: #29303b;
+    --input: #29303b;
+    --ring: #ff7a2f;
+    --chart-1: #ff7a2f;
+    --chart-2: #a596ff;
+    --chart-3: #3ccf78;
+    --chart-4: #96a0b0;
+    --chart-5: #ff6159;
+    --sidebar: #161a21;
+    --sidebar-foreground: #e5e9f0;
+    --sidebar-primary: #e5e9f0;
+    --sidebar-primary-foreground: #0e1116;
+    --sidebar-accent: #1c212a;
+    --sidebar-accent-foreground: #e5e9f0;
+    --sidebar-border: #29303b;
+    --sidebar-ring: #ff7a2f;
+    color-scheme: dark;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
     @apply bg-background text-foreground;
-    }
+  }
   html {
     @apply font-sans;
-    }
+  }
+}
+
+/* React Flow: theme its chrome from our tokens */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  --xy-edge-stroke-selected: var(--recorder);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--accent);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-attribution-background-color: transparent;
+}
+
+@keyframes bb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--recorder-soft); }
+  50% { box-shadow: 0 0 0 6px var(--recorder-soft); }
+}
+.bb-running { animation: bb-pulse 0.9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bb-running { animation: none; box-shadow: 0 0 0 3px var(--recorder-soft); }
 }

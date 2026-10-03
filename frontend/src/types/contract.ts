@@ -117,6 +117,7 @@ export interface ReplayRequest {
 // --- SSE events --------------------------------------------------------------
 
 export type RunEvent =
+  | { event: 'run_started'; data: { run_id: string; agent: string; task: Json; request_text: string } }
   | { event: 'step_started'; data: { id: number; name: string } }
   | { event: 'step_done'; data: { step: Step } }
   | { event: 'step_reused'; data: { id: number } }

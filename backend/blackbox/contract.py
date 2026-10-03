@@ -143,6 +143,13 @@ class ReplayRequest(Model):
 # --- SSE event payloads ------------------------------------------------------
 
 
+class RunStartedEvent(Model):
+    run_id: str
+    agent: str
+    task: dict[str, Any]
+    request_text: str
+
+
 class StepStartedEvent(Model):
     id: int
     name: str

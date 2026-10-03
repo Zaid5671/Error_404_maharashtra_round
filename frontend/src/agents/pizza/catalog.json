@@ -1,0 +1,103 @@
+{
+  "pizzas": [
+    {
+      "id": "margherita",
+      "name": "Margherita",
+      "prices": {
+        "S": 149,
+        "M": 249,
+        "L": 349
+      }
+    },
+    {
+      "id": "veg_supreme",
+      "name": "Veg Supreme",
+      "prices": {
+        "S": 249,
+        "M": 349,
+        "L": 449
+      }
+    },
+    {
+      "id": "paneer_tikka",
+      "name": "Paneer Tikka",
+      "prices": {
+        "S": 279,
+        "M": 379,
+        "L": 479
+      }
+    },
+    {
+      "id": "pepperoni",
+      "name": "Pepperoni",
+      "prices": {
+        "S": 199,
+        "M": 299,
+        "L": 399
+      }
+    },
+    {
+      "id": "chicken_tikka",
+      "name": "Chicken Tikka",
+      "prices": {
+        "S": 269,
+        "M": 369,
+        "L": 469
+      }
+    },
+    {
+      "id": "bbq_chicken",
+      "name": "BBQ Chicken",
+      "prices": {
+        "S": 289,
+        "M": 389,
+        "L": 489
+      }
+    }
+  ],
+  "sizes": [
+    "S",
+    "M",
+    "L"
+  ],
+  "coupons": [
+    {
+      "code": "WELCOME50",
+      "label": "₹50 off above ₹300"
+    },
+    {
+      "code": "PIZZA20",
+      "label": "20% off above ₹500"
+    },
+    {
+      "code": "BIG300",
+      "label": "₹300 off above ₹1,200"
+    },
+    {
+      "code": "DIWALI30",
+      "label": "30% off above ₹600 (expired)"
+    }
+  ],
+  "areas": [
+    {
+      "name": "Andheri",
+      "deliverable": true
+    },
+    {
+      "name": "Bandra",
+      "deliverable": true
+    },
+    {
+      "name": "Powai",
+      "deliverable": true
+    },
+    {
+      "name": "Colaba",
+      "deliverable": true
+    },
+    {
+      "name": "Vashi",
+      "deliverable": false
+    }
+  ]
+}
