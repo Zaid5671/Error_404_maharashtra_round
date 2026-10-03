@@ -69,6 +69,8 @@ def run_group(adapter: AgentAdapter, template_id: str, seed: int, args: argparse
             jobs.append((f"{clean_id}__llm_misread", "llm", "llm_misread"))
         if test_index < args.choice:
             jobs.append((f"{clean_id}__llm_choice", "llm", "llm_wrong_choice"))
+        if test_index < args.substitute:
+            jobs.append((f"{clean_id}__llm_substitute", "llm", "llm_wrong_substitute"))
 
     used: set[str] = set()
     for run_id, family, fault_type in jobs:
@@ -82,6 +84,7 @@ def run_group(adapter: AgentAdapter, template_id: str, seed: int, args: argparse
         faulted = injector.inject(
             adapter, clean, run_id=run_id, rng=random.Random(run_id),
             family=family, fault_type=fault_type, avoid=used,
+            exclude=set(args.holdout) if split == "train" else set(),
         )
         if faulted is None:
             continue
@@ -109,7 +112,12 @@ def main() -> None:
     parser.add_argument("--seeds", type=int, default=14, help="clean runs per template")
     parser.add_argument("--tool-faults", type=int, default=2, help="faulted copies per clean run (seen fault types)")
     parser.add_argument("--misread", type=int, default=40, help="llm_misread runs (test only, unseen)")
-    parser.add_argument("--choice", type=int, default=60, help="llm_wrong_choice runs (test only, unseen)")
+    parser.add_argument("--choice", type=int, default=0, help="llm_wrong_choice runs (test only, unseen)")
+    parser.add_argument("--substitute", type=int, default=0, help="llm_wrong_substitute runs (test only, unseen; only where a substitution happened)")
+    parser.add_argument(
+        "--holdout", type=lambda v: [t for t in v.split(",") if t], default=[],
+        help="comma-separated tool fault types never used on train runs (unseen types for testing)",
+    )
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--max-groups", type=int, default=None, help="stop after this many groups (for a quick check)")
     parser.add_argument("--status", action="store_true", help="print counts and exit")

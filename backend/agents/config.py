@@ -32,5 +32,5 @@ LLM_API_KEY = PROVIDERS[PROVIDER]["api_key"]
 LLM_MODEL = os.getenv("LLM_MODEL", PROVIDERS[PROVIDER]["model"])
 TEMPERATURE = 0
 REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT", "medium")  # "none", "low", "medium", "high"
-REQUESTS_PER_MINUTE = 14  # Gemini free tier allows 15 per model per project
+REQUESTS_PER_MINUTE = int(os.getenv("LLM_RPM", "14"))  # free tier: 15 per model; paid tier is much higher
 MAX_LLM_CALLS = 12  # per run; a run that hits this ends without finishing its task

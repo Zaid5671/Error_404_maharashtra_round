@@ -131,7 +131,9 @@ def llm_misread(run: dict, step: dict, rng: random.Random) -> dict | None:
 
 
 def llm_wrong_choice(run: dict, step: dict, rng: random.Random) -> dict | None:
-    if run["expected"] is None or step["error"]:
+    # Only where the agent picked the coupon itself: when the customer named a code, the agent
+    # remembers it and re-applies it after a wrong choice, so the fault never sticks (measured in P2).
+    if run["expected"] is None or step["error"] or run["task"]["coupon"]:
         return None
     current = str(step["input"].get("code", "")).upper()
     subtotal = _state_before(run, step).get("subtotal") or 0
@@ -148,6 +150,31 @@ def llm_wrong_choice(run: dict, step: dict, rng: random.Random) -> dict | None:
     return {"args": {"code": code}, "detail": f"LLM applied {code} instead of {current}"}
 
 
+def llm_wrong_substitute(run: dict, step: dict, rng: random.Random) -> dict | None:
+    """The LLM picks the wrong (but plausible) replacement for an out-of-stock pizza.
+
+    Injected at the check_stock of the replacement, which is where the LLM makes that choice: it
+    checks the wrong pizza, sees it in stock, and adds it to the cart. (Injecting at add_to_cart
+    fails: the tool rejects a pizza whose stock was never checked, and the agent then fixes it.)
+    """
+    if run["expected"] is None or step["error"]:
+        return None
+    parsed = (_state_before(run, step).get("parsed_order") or {}).get("items", [])
+    pizza, size = step["output"]["pizza"], step["output"]["size"]
+    if (pizza, size) in {(i["pizza"], i["size"]) for i in parsed} or not step["output"]["available"]:
+        return None  # not the check of a replacement
+    final = _ordered_pairs(run)
+    category = shop.MENU[pizza]["category"]
+    options = [
+        p for p in shop.MENU
+        if shop.MENU[p]["category"] == category and p != pizza and shop.in_stock(p, size) and (p, size) not in final
+    ]
+    if not options:
+        return None
+    choice = rng.choice(options)
+    return {"args": {"pizza": choice, "size": size}, "detail": f"LLM chose {choice} {size} as the replacement instead of {pizza}"}
+
+
 FAULTS = [
     FaultSpec("wrong_price", "tool", "search_menu", wrong_price),
     FaultSpec("stock_lie", "tool", "check_stock", stock_lie),
@@ -156,4 +183,5 @@ FAULTS = [
     FaultSpec("wrong_delivery", "tool", "check_delivery", wrong_delivery),
     FaultSpec("llm_misread", "llm", "parse_order", llm_misread),
     FaultSpec("llm_wrong_choice", "llm", "apply_coupon", llm_wrong_choice),
+    FaultSpec("llm_wrong_substitute", "llm", "check_stock", llm_wrong_substitute),
 ]

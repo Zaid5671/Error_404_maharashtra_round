@@ -33,13 +33,14 @@ def inject(
     family: str = "tool",
     fault_type: str | None = None,
     avoid: set[str] = frozenset(),
+    exclude: set[str] = frozenset(),
 ) -> dict | None:
     """Make one faulted copy of a clean run. Returns None if no fault applies.
 
     Picks the fault type first (uniformly, skipping `avoid` when possible) so types stay balanced,
-    then a step of that type.
+    then a step of that type. Types in `exclude` are never used (held-out fault types on train runs).
     """
-    options = candidates(adapter, run, rng, family)
+    options = [o for o in candidates(adapter, run, rng, family) if o[0].type not in exclude]
     if fault_type:
         options = [o for o in options if o[0].type == fault_type]
     if not options:

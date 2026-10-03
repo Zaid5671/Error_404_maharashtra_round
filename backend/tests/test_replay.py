@@ -46,6 +46,8 @@ def fake_llm(monkeypatch):
     script: list[list] = []
 
     def chat(messages, schemas):
+        if not script:  # out of script: the agent just stops talking
+            return {"role": "assistant", "content": "done"}, dict(STATS)
         return assistant(script.pop(0), f"r{len(messages)}"), dict(STATS)
 
     monkeypatch.setattr(agent.llm, "chat", chat)
@@ -109,8 +111,11 @@ def test_every_fault_type_applies_to_a_suitable_run():
     run = clean_run()
     found = {spec.type for spec, _, _ in injector.candidates(ADAPTER, run, random.Random(0), "tool")}
     found |= {spec.type for spec, _, _ in injector.candidates(ADAPTER, run, random.Random(0), "llm")}
-    # stock_lie needs an out-of-stock item, which this order doesn't have
-    assert found == {"wrong_price", "wrong_cart_line", "wrong_discount", "wrong_delivery", "llm_misread", "llm_wrong_choice"}
+    # stock_lie needs an out-of-stock item, which this order doesn't have; llm_wrong_choice only
+    # applies when the agent picked the coupon itself, and this customer named PIZZA20
+    assert found == {"wrong_price", "wrong_cart_line", "wrong_discount", "wrong_delivery", "llm_misread"}
+    auto = {**run, "task": {**run["task"], "coupon": None}}
+    assert {s.type for s, _, _ in injector.candidates(ADAPTER, auto, random.Random(0), "llm")} == {"llm_misread", "llm_wrong_choice"}
 
 
 def test_faults_are_subtle_and_change_something():
@@ -141,3 +146,11 @@ def test_misread_persists_in_what_the_llm_sees(fake_llm):
     user_turn = next(m for m in new["messages"] if m["role"] == "user")["content"]
     assert "pepperoni" in user_turn and user_turn != REQUEST
     assert new["request_text"] == REQUEST  # the run keeps the customer's real words
+
+
+def test_inject_never_uses_excluded_types(fake_llm):
+    run = clean_run()
+    fake_llm += [BATCHES[4], BATCHES[5]] * 40
+    for seed in range(10):
+        faulted = injector.inject(ADAPTER, run, run_id=f"x{seed}", rng=random.Random(seed), exclude={"wrong_delivery"})
+        assert faulted["fault"]["type"] != "wrong_delivery"
