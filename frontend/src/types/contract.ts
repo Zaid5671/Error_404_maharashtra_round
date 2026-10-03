@@ -77,7 +77,7 @@ export interface Run {
   replayed_from_step: number | null
   order: Order
   request_text: string
-  expected: OrderResult
+  expected: OrderResult | null // null: the correct behaviour is to place no order
   actual: OrderResult | null
   outcome: Outcome
   fault: Fault | null
@@ -157,5 +157,5 @@ export type RunEvent =
   | { event: 'step_started'; data: { id: number; name: string } }
   | { event: 'step_done'; data: { step: Step } }
   | { event: 'step_reused'; data: { id: number } }
-  | { event: 'run_done'; data: { run_id: string; outcome: Outcome; actual: OrderResult | null; expected: OrderResult } }
+  | { event: 'run_done'; data: { run_id: string; outcome: Outcome; actual: OrderResult | null; expected: OrderResult | null } }
   | { event: 'error'; data: { message: string } }

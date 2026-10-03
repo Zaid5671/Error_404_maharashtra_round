@@ -1,0 +1,6 @@
+[
+  {"code": "WELCOME50", "type": "flat", "value": 50,  "min_order": 300,  "expires": "2026-12-31", "label": "₹50 off above ₹300"},
+  {"code": "PIZZA20",   "type": "pct",  "value": 20,  "min_order": 500,  "expires": "2026-12-31", "label": "20% off above ₹500"},
+  {"code": "BIG300",    "type": "flat", "value": 300, "min_order": 1200, "expires": "2026-12-31", "label": "₹300 off above ₹1,200"},
+  {"code": "DIWALI30",  "type": "pct",  "value": 30,  "min_order": 600,  "expires": "2026-09-30", "label": "30% off above ₹600 (expired)"}
+]

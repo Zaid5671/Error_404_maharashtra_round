@@ -89,7 +89,7 @@ class Run(Model):
     replayed_from_step: int | None
     order: Order
     request_text: str
-    expected: OrderResult
+    expected: OrderResult | None  # None: the correct behaviour is to place no order
     actual: OrderResult | None
     outcome: Literal["success", "failure"]
     fault: Fault | None
@@ -213,7 +213,7 @@ class RunDoneEvent(Model):
     run_id: str
     outcome: Literal["success", "failure"]
     actual: OrderResult | None
-    expected: OrderResult
+    expected: OrderResult | None
 
 
 class ErrorEvent(Model):

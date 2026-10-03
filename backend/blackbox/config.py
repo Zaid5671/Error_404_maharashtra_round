@@ -32,9 +32,14 @@ LLM_BASE_URL = PROVIDERS[PROVIDER]["base_url"]
 LLM_API_KEY = PROVIDERS[PROVIDER]["api_key"]
 LLM_MODEL = os.getenv("LLM_MODEL", PROVIDERS[PROVIDER]["model"])
 TEMPERATURE = 0
+REASONING_EFFORT = os.getenv("LLM_REASONING_EFFORT", "medium")  # "none", "low", "medium", "high"
 
 DATA_DIR = BACKEND_DIR / "blackbox" / "data"
 RUNS_DIR = BACKEND_DIR / "runs"
 MODELS_DIR = BACKEND_DIR / "models"
 REPORTS_DIR = BACKEND_DIR / "reports"
 SAMPLE_DIR = BACKEND_DIR.parent / "frontend" / "src" / "sample"
+
+SHOP_DATE = "2026-10-03"  # fixed, so coupon expiry never depends on the day we run
+MAX_LLM_CALLS = 12  # per run; a run that hits this ends without placing an order
+REQUESTS_PER_MINUTE = 14  # Gemini free tier allows 15 per model per project

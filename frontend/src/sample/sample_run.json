@@ -18,9 +18,9 @@
       }
     ],
     "coupon": "PIZZA20",
-    "area": "Kothrud"
+    "area": "Andheri"
   },
-  "request_text": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud",
+  "request_text": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Andheri",
   "expected": {
     "items": [
       {
@@ -82,7 +82,7 @@
     },
     {
       "role": "user",
-      "content": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud"
+      "content": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Andheri"
     },
     {
       "role": "assistant",
@@ -93,7 +93,7 @@
           "type": "function",
           "function": {
             "name": "parse_order",
-            "arguments": "{\"items\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1}], \"coupon\": \"PIZZA20\", \"area\": \"Kothrud\"}"
+            "arguments": "{\"items\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1}], \"coupon\": \"PIZZA20\", \"area\": \"Andheri\"}"
           }
         }
       ]
@@ -226,7 +226,7 @@
           "type": "function",
           "function": {
             "name": "check_delivery",
-            "arguments": "{\"area\": \"Kothrud\"}"
+            "arguments": "{\"area\": \"Andheri\"}"
           }
         }
       ]
@@ -285,7 +285,7 @@
       "kind": "llm",
       "name": "parse_order",
       "input": {
-        "request_text": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud"
+        "request_text": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Andheri"
       },
       "output": {
         "items": [
@@ -301,7 +301,7 @@
           }
         ],
         "coupon": "PIZZA20",
-        "area": "Kothrud"
+        "area": "Andheri"
       },
       "uses": [],
       "llm": {
@@ -326,7 +326,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {},
         "stock": {},
@@ -383,7 +383,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -446,7 +446,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -508,7 +508,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -572,7 +572,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -667,7 +667,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -750,7 +750,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -799,7 +799,7 @@
       "kind": "tool",
       "name": "check_delivery",
       "input": {
-        "area": "Kothrud"
+        "area": "Andheri"
       },
       "output": {
         "deliverable": true,
@@ -830,7 +830,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -912,7 +912,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {
@@ -994,7 +994,7 @@
             }
           ],
           "coupon": "PIZZA20",
-          "area": "Kothrud"
+          "area": "Andheri"
         },
         "menu": {
           "pepperoni": {

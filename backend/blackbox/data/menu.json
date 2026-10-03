@@ -1,0 +1,8 @@
+[
+  {"id": "margherita",    "name": "Margherita",    "category": "veg",     "prices": {"S": 149, "M": 249, "L": 349}},
+  {"id": "veg_supreme",   "name": "Veg Supreme",   "category": "veg",     "prices": {"S": 249, "M": 349, "L": 449}},
+  {"id": "paneer_tikka",  "name": "Paneer Tikka",  "category": "veg",     "prices": {"S": 279, "M": 379, "L": 479}},
+  {"id": "pepperoni",     "name": "Pepperoni",     "category": "non-veg", "prices": {"S": 199, "M": 299, "L": 399}},
+  {"id": "chicken_tikka", "name": "Chicken Tikka", "category": "non-veg", "prices": {"S": 269, "M": 369, "L": 469}},
+  {"id": "bbq_chicken",   "name": "BBQ Chicken",   "category": "non-veg", "prices": {"S": 289, "M": 389, "L": 489}}
+]

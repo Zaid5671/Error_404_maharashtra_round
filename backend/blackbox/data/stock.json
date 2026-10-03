@@ -1,0 +1,7 @@
+{
+  "out_of_stock": [
+    {"pizza": "paneer_tikka",  "size": "L"},
+    {"pizza": "chicken_tikka", "size": "M"},
+    {"pizza": "margherita",    "size": "S"}
+  ]
+}

@@ -1,0 +1,7 @@
+[
+  {"name": "Andheri", "deliverable": true,  "fee": 40},
+  {"name": "Bandra",  "deliverable": true,  "fee": 50},
+  {"name": "Powai",   "deliverable": true,  "fee": 60},
+  {"name": "Colaba",  "deliverable": true,  "fee": 80},
+  {"name": "Vashi",   "deliverable": false, "fee": null}
+]

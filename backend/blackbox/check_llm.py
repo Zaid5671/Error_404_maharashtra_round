@@ -42,7 +42,7 @@ def main() -> None:
         temperature=config.TEMPERATURE,
         messages=[
             {"role": "system", "content": "You are a pizza ordering agent. Parse the order with parse_order. Pizza ids are snake_case."},
-            {"role": "user", "content": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud"},
+            {"role": "user", "content": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Andheri"},
         ],
         tools=TOOLS,
         tool_choice={"type": "function", "function": {"name": "parse_order"}},
