@@ -7,13 +7,15 @@ Run every template: python -m agents.pizza.agent --all
 """
 
 import argparse
+import copy
 import json
+import random
 import time
 import uuid
 from typing import Any
 
 from agents import config, llm
-from agents.pizza import shop, tools
+from agents.pizza import orders, shop, tools
 from agents.pizza.orders import TEMPLATES, generate
 from agents.pizza.solver import judge
 from blackbox.adapter import EventFn
@@ -65,8 +67,12 @@ def execute_call(
     request_text: str,
     llm_stats: dict | None,
     on_event: EventFn | None = None,
+    forced_output: dict | None = None,
 ) -> dict:
-    """Run one tool call from the LLM, record the step, append its tool message. Returns the step."""
+    """Run one tool call from the LLM, record the step, append its tool message. Returns the step.
+
+    With `forced_output` the tool is not run; that output is used instead (replay with an edited step).
+    """
     name = call["function"]["name"]
     if on_event:
         on_event("step_started", {"id": rec.next_id, "name": name})
@@ -74,7 +80,7 @@ def execute_call(
     start = time.perf_counter()
     try:
         args: dict[str, Any] = json.loads(call["function"].get("arguments") or "{}")
-        output = tools.compute(name, rec.state, args)
+        output = forced_output if forced_output is not None else tools.compute(name, rec.state, args)
     except json.JSONDecodeError:
         args, output = {}, {"error": "arguments were not valid JSON"}
     tool_ms = int((time.perf_counter() - start) * 1000)
@@ -162,22 +168,113 @@ def run_order(
     ]
     rec = Recorder(tools.new_state(), output_hook)
     run_loop(messages, rec, request_text=task["request_text"], on_event=on_event)
+    return _finish_run(
+        rec, messages,
+        run_id=run_id, source=source, template_id=task["template_id"], task=task["task"],
+        request_text=task["request_text"], expected=task["expected"], on_event=on_event,
+    )
 
+
+def resume_run(
+    run: dict,
+    step_id: int,
+    *,
+    run_id: str,
+    source: str = "replay",
+    new_output: dict | None = None,
+    new_args: dict | None = None,
+    on_event: EventFn | None = None,
+    output_hook: OutputHook | None = None,
+) -> dict:
+    """Continue `run` from the checkpoint before `step_id` (see AgentAdapter.resume).
+
+    One LLM response can hold several tool calls, so the conversation is restored up to (not
+    including) step k's tool message: that keeps the assistant message with k's call and the tool
+    messages of earlier calls in the same batch. Step k is redone, then the rest of its batch,
+    then the normal loop continues.
+    """
+    steps = run["steps"]
+    target = steps[step_id - 1]
+    rec = Recorder.resume(steps[: step_id - 1]) if step_id > 1 else Recorder(tools.new_state())
+
+    cut = target["msg_index"] - 1  # index of step k's tool message
+    call_id = run["messages"][cut]["tool_call_id"]
+    messages = copy.deepcopy(run["messages"][:cut])
+    holder = next(
+        m for m in reversed(messages)
+        if m["role"] == "assistant" and any(tc["id"] == call_id for tc in m.get("tool_calls") or [])
+    )
+    batch = holder["tool_calls"]
+    pos = next(i for i, tc in enumerate(batch) if tc["id"] == call_id)
+    if new_args is not None:
+        batch[pos]["function"]["arguments"] = json.dumps(new_args)
+        if target["name"] == "parse_order":
+            # A real misreading persists: the LLM believes its own reading. Without this it re-reads
+            # the request at add_to_cart and silently fixes the injected mistake. So the user turn it
+            # sees is rewritten to match the misread order; Run.request_text keeps the real words.
+            user = next(m for m in messages if m["role"] == "user")
+            user["content"] = orders.request_text(random.Random(run_id), _as_order(new_args))
+
+    request_text = run["request_text"]
+    step = execute_call(
+        messages, rec, batch[pos],
+        request_text=request_text, llm_stats=target["llm"], on_event=on_event, forced_output=new_output,
+    )
+    rec.output_hook = output_hook  # never applied to the edited step itself
+    placed = step["name"] == "place_order" and step["error"] is None
+    for call in batch[pos + 1:]:
+        step = execute_call(messages, rec, call, request_text=request_text, llm_stats=None, on_event=on_event)
+        placed = placed or (step["name"] == "place_order" and step["error"] is None)
+    if not placed:
+        run_loop(messages, rec, request_text=request_text, on_event=on_event)
+
+    return _finish_run(
+        rec, messages,
+        run_id=run_id, source=source, template_id=run["template_id"], task=run["task"],
+        request_text=request_text, expected=run["expected"], on_event=on_event,
+        parent_run_id=run["run_id"], replayed_from_step=step_id, split=run["split"],
+    )
+
+
+def _as_order(parse_args: dict) -> dict:
+    """parse_order arguments in the shape orders.request_text expects."""
+    items = [
+        {"pizza": shop.normalize_pizza(str(i["pizza"])) or i["pizza"], "size": str(i["size"]).upper()[:1], "qty": int(i["qty"])}
+        for i in parse_args["items"]
+    ]
+    return {"items": items, "coupon": parse_args.get("coupon"), "area": parse_args.get("area", "")}
+
+
+def _finish_run(
+    rec: Recorder,
+    messages: list[dict],
+    *,
+    run_id: str,
+    source: str,
+    template_id: str,
+    task: dict,
+    request_text: str,
+    expected: dict | None,
+    on_event: EventFn | None,
+    parent_run_id: str | None = None,
+    replayed_from_step: int | None = None,
+    split: str | None = None,
+) -> dict:
     actual = actual_result(rec.steps)
     run = {
         "run_id": run_id,
         "agent": AGENT_NAME,
-        "template_id": task["template_id"],
+        "template_id": template_id,
         "source": source,
-        "parent_run_id": None,
-        "replayed_from_step": None,
-        "task": task["task"],
-        "request_text": task["request_text"],
-        "expected": task["expected"],
+        "parent_run_id": parent_run_id,
+        "replayed_from_step": replayed_from_step,
+        "task": task,
+        "request_text": request_text,
+        "expected": expected,
         "actual": actual,
-        "outcome": judge(task["expected"], actual),
+        "outcome": judge(expected, actual),
         "fault": None,
-        "split": None,
+        "split": split,
         "messages": messages,
         "steps": rec.steps,
     }

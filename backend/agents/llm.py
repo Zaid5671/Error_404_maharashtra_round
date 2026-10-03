@@ -7,11 +7,7 @@ import time
 from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
 
 from agents import config
-
-
-class QuotaExhausted(Exception):
-    """The provider's daily request cap was hit; generation should stop and resume later."""
-
+from blackbox.adapter import QuotaExhausted
 
 _client = OpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY, max_retries=0)
 _lock = threading.Lock()

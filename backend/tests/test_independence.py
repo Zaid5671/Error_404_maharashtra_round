@@ -21,7 +21,7 @@ def test_every_registered_agent_has_the_adapter_methods():
     for name in AGENTS:
         adapter = get_agent(name)
         assert adapter.name == name
-        for method in ("templates", "make_task", "run", "resume", "judge"):
+        for method in ("templates", "make_task", "faults", "run", "resume", "judge"):
             assert callable(getattr(adapter, method))
         task = adapter.make_task(adapter.templates()[0], 0)
         assert {"template_id", "seed", "task", "request_text", "expected"} <= set(task)
