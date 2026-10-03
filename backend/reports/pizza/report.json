@@ -1,0 +1,31 @@
+{
+  "agent": "pizza",
+  "n_train_runs": 486,
+  "n_test_runs": 177,
+  "overall": {
+    "top1": 0.8757,
+    "top3": 0.9153
+  },
+  "seen": {
+    "top1": 0.932,
+    "top3": 0.9515,
+    "n": 103
+  },
+  "unseen": {
+    "top1": 0.7973,
+    "top3": 0.8649,
+    "n": 74
+  },
+  "fault_types": {
+    "seen": [
+      "stock_lie",
+      "wrong_cart_line",
+      "wrong_discount",
+      "wrong_price"
+    ],
+    "unseen": [
+      "llm_misread",
+      "wrong_delivery"
+    ]
+  }
+}
