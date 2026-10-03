@@ -70,16 +70,18 @@ def live_fault(
     *,
     family: str = "tool",
     other_chance: float = 0.5,
+    fault_type: str | None = None,
 ) -> tuple[OutputHook, dict]:
     """A hidden fault for a live run ("Surprise me"), applied while the run streams.
 
     Returns (output_hook, fault). `steps` must be kept up to date by the caller (the steps
     finished so far), because fault makers look at earlier steps. One fault type is preferred,
     picked at random; a step where another type applies gets that one with `other_chance`, so a
-    fault almost always lands. `fault` is filled in when it does ({type, family, step_id, detail}).
+    fault almost always lands. `fault_type` forces one type (and only that type).
+    `fault` is filled in when it lands ({type, family, step_id, detail}).
     """
-    specs = [s for s in adapter.faults() if s.family == family]
-    preferred = rng.choice(sorted({s.type for s in specs}))
+    specs = [s for s in adapter.faults() if s.family == family and fault_type in (None, s.type)]
+    preferred = fault_type or rng.choice(sorted({s.type for s in specs}))
     fault: dict = {}
 
     def hook(step_id: int, name: str, args: dict, output: dict) -> dict:
