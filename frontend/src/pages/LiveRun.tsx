@@ -116,7 +116,7 @@ export function LiveRun() {
 
       <Panel title="Step details" sub={selected ? `step #${selected.id}` : 'click a step'} className="lg:col-span-2 xl:col-span-1">
         <div className="p-3.5">
-          <StepDetails step={selected} label={plugin.stepLabel} onSelect={s.select}
+          <StepDetails step={selected} steps={s.steps} label={plugin.stepLabel} onSelect={s.select}
             emptyText={running ? 'Steps appear as the agent takes them. Click one to inspect it.'
               : 'Run the agent, then click any step to see what went in, what came out, and which earlier steps it used.'} />
         </div>
