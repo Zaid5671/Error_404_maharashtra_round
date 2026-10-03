@@ -1,0 +1,1042 @@
+{
+  "run_id": "run_sample_coupon",
+  "template_id": "two_pizzas_coupon_03",
+  "source": "generated",
+  "parent_run_id": null,
+  "replayed_from_step": null,
+  "order": {
+    "items": [
+      {
+        "pizza": "pepperoni",
+        "size": "L",
+        "qty": 2
+      },
+      {
+        "pizza": "veg_supreme",
+        "size": "M",
+        "qty": 1
+      }
+    ],
+    "coupon": "PIZZA20",
+    "area": "Kothrud"
+  },
+  "request_text": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud",
+  "expected": {
+    "items": [
+      {
+        "pizza": "pepperoni",
+        "size": "L",
+        "qty": 2,
+        "unit_price": 399,
+        "line_total": 798
+      },
+      {
+        "pizza": "veg_supreme",
+        "size": "M",
+        "qty": 1,
+        "unit_price": 349,
+        "line_total": 349
+      }
+    ],
+    "subtotal": 1147,
+    "coupon": "PIZZA20",
+    "discount": 229,
+    "delivery_fee": 40,
+    "total": 958
+  },
+  "actual": {
+    "items": [
+      {
+        "pizza": "pepperoni",
+        "size": "L",
+        "qty": 2,
+        "unit_price": 399,
+        "line_total": 798
+      },
+      {
+        "pizza": "veg_supreme",
+        "size": "M",
+        "qty": 1,
+        "unit_price": 349,
+        "line_total": 349
+      }
+    ],
+    "subtotal": 1147,
+    "coupon": "PIZZA20",
+    "discount": 115,
+    "delivery_fee": 40,
+    "total": 1072
+  },
+  "outcome": "failure",
+  "fault": {
+    "type": "wrong_discount",
+    "family": "tool",
+    "step_id": 7,
+    "detail": "discount_pct 20 -> 10"
+  },
+  "split": "test",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a pizza ordering agent. Follow the shop rules. Call one tool at a time."
+    },
+    {
+      "role": "user",
+      "content": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_01",
+          "type": "function",
+          "function": {
+            "name": "parse_order",
+            "arguments": "{\"items\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1}], \"coupon\": \"PIZZA20\", \"area\": \"Kothrud\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_01",
+      "content": "{\"recorded\": true}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_02",
+          "type": "function",
+          "function": {
+            "name": "search_menu",
+            "arguments": "{\"pizza\": \"pepperoni\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_02",
+      "content": "{\"found\": true, \"pizza\": \"pepperoni\", \"name\": \"Pepperoni\", \"prices\": {\"S\": 199, \"M\": 299, \"L\": 399}}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_03",
+          "type": "function",
+          "function": {
+            "name": "search_menu",
+            "arguments": "{\"pizza\": \"veg_supreme\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_03",
+      "content": "{\"found\": true, \"pizza\": \"veg_supreme\", \"name\": \"Veg Supreme\", \"prices\": {\"S\": 249, \"M\": 349, \"L\": 449}}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_04",
+          "type": "function",
+          "function": {
+            "name": "check_stock",
+            "arguments": "{\"pizza\": \"pepperoni\", \"size\": \"L\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_04",
+      "content": "{\"available\": true}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_05",
+          "type": "function",
+          "function": {
+            "name": "check_stock",
+            "arguments": "{\"pizza\": \"veg_supreme\", \"size\": \"M\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_05",
+      "content": "{\"available\": true}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_06",
+          "type": "function",
+          "function": {
+            "name": "add_to_cart",
+            "arguments": "{\"items\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1}]}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_06",
+      "content": "{\"cart\": [{\"pizza\": \"pepperoni\", \"size\": \"L\", \"qty\": 2, \"unit_price\": 399, \"line_total\": 798}, {\"pizza\": \"veg_supreme\", \"size\": \"M\", \"qty\": 1, \"unit_price\": 349, \"line_total\": 349}], \"subtotal\": 1147}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_07",
+          "type": "function",
+          "function": {
+            "name": "apply_coupon",
+            "arguments": "{\"code\": \"PIZZA20\", \"subtotal\": 1147}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_07",
+      "content": "{\"valid\": true, \"discount_pct\": 10, \"discount\": 115}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_08",
+          "type": "function",
+          "function": {
+            "name": "check_delivery",
+            "arguments": "{\"area\": \"Kothrud\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_08",
+      "content": "{\"deliverable\": true, \"delivery_fee\": 40}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_09",
+          "type": "function",
+          "function": {
+            "name": "calculate_total",
+            "arguments": "{}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_09",
+      "content": "{\"subtotal\": 1147, \"discount\": 115, \"delivery_fee\": 40, \"total\": 1072}"
+    },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_10",
+          "type": "function",
+          "function": {
+            "name": "place_order",
+            "arguments": "{}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_10",
+      "content": "{\"order_id\": \"ORD-58213\", \"status\": \"placed\", \"total\": 1072}"
+    },
+    {
+      "role": "assistant",
+      "content": "Your order ORD-58213 is placed. Total: Rs 1072 (PIZZA20 applied, Rs 115 off, Rs 40 delivery)."
+    }
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "kind": "llm",
+      "name": "parse_order",
+      "input": {
+        "request_text": "2 large pepperoni and 1 medium veg supreme, code PIZZA20, deliver to Kothrud"
+      },
+      "output": {
+        "items": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1
+          }
+        ],
+        "coupon": "PIZZA20",
+        "area": "Kothrud"
+      },
+      "uses": [],
+      "llm": {
+        "latency_ms": 612,
+        "tokens_in": 742,
+        "tokens_out": 88
+      },
+      "tool_latency_ms": 1,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {},
+        "stock": {},
+        "cart": [],
+        "subtotal": null,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 4
+    },
+    {
+      "id": 2,
+      "kind": "tool",
+      "name": "search_menu",
+      "input": {
+        "pizza": "pepperoni"
+      },
+      "output": {
+        "found": true,
+        "pizza": "pepperoni",
+        "name": "Pepperoni",
+        "prices": {
+          "S": 199,
+          "M": 299,
+          "L": 399
+        }
+      },
+      "uses": [
+        1
+      ],
+      "llm": {
+        "latency_ms": 388,
+        "tokens_in": 861,
+        "tokens_out": 24
+      },
+      "tool_latency_ms": 3,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          }
+        },
+        "stock": {},
+        "cart": [],
+        "subtotal": null,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 6
+    },
+    {
+      "id": 3,
+      "kind": "tool",
+      "name": "search_menu",
+      "input": {
+        "pizza": "veg_supreme"
+      },
+      "output": {
+        "found": true,
+        "pizza": "veg_supreme",
+        "name": "Veg Supreme",
+        "prices": {
+          "S": 249,
+          "M": 349,
+          "L": 449
+        }
+      },
+      "uses": [
+        1
+      ],
+      "llm": {
+        "latency_ms": 402,
+        "tokens_in": 934,
+        "tokens_out": 25
+      },
+      "tool_latency_ms": 2,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {},
+        "cart": [],
+        "subtotal": null,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 8
+    },
+    {
+      "id": 4,
+      "kind": "tool",
+      "name": "check_stock",
+      "input": {
+        "pizza": "pepperoni",
+        "size": "L"
+      },
+      "output": {
+        "available": true
+      },
+      "uses": [
+        1
+      ],
+      "llm": {
+        "latency_ms": 371,
+        "tokens_in": 1012,
+        "tokens_out": 27
+      },
+      "tool_latency_ms": 2,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true
+        },
+        "cart": [],
+        "subtotal": null,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 10
+    },
+    {
+      "id": 5,
+      "kind": "tool",
+      "name": "check_stock",
+      "input": {
+        "pizza": "veg_supreme",
+        "size": "M"
+      },
+      "output": {
+        "available": true
+      },
+      "uses": [
+        1
+      ],
+      "llm": {
+        "latency_ms": 365,
+        "tokens_in": 1063,
+        "tokens_out": 28
+      },
+      "tool_latency_ms": 2,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [],
+        "subtotal": null,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 12
+    },
+    {
+      "id": 6,
+      "kind": "tool",
+      "name": "add_to_cart",
+      "input": {
+        "items": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1
+          }
+        ]
+      },
+      "output": {
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147
+      },
+      "uses": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "llm": {
+        "latency_ms": 455,
+        "tokens_in": 1121,
+        "tokens_out": 61
+      },
+      "tool_latency_ms": 4,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": null,
+        "discount": null,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 14
+    },
+    {
+      "id": 7,
+      "kind": "tool",
+      "name": "apply_coupon",
+      "input": {
+        "code": "PIZZA20",
+        "subtotal": 1147
+      },
+      "output": {
+        "valid": true,
+        "discount_pct": 10,
+        "discount": 115
+      },
+      "uses": [
+        1,
+        6
+      ],
+      "llm": {
+        "latency_ms": 420,
+        "tokens_in": 1240,
+        "tokens_out": 41
+      },
+      "tool_latency_ms": 8,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 115,
+        "deliverable": null,
+        "delivery_fee": null,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 16
+    },
+    {
+      "id": 8,
+      "kind": "tool",
+      "name": "check_delivery",
+      "input": {
+        "area": "Kothrud"
+      },
+      "output": {
+        "deliverable": true,
+        "delivery_fee": 40
+      },
+      "uses": [
+        1
+      ],
+      "llm": {
+        "latency_ms": 391,
+        "tokens_in": 1302,
+        "tokens_out": 22
+      },
+      "tool_latency_ms": 3,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 115,
+        "deliverable": true,
+        "delivery_fee": 40,
+        "total": null,
+        "order_id": null
+      },
+      "msg_index": 18
+    },
+    {
+      "id": 9,
+      "kind": "tool",
+      "name": "calculate_total",
+      "input": {},
+      "output": {
+        "subtotal": 1147,
+        "discount": 115,
+        "delivery_fee": 40,
+        "total": 1072
+      },
+      "uses": [
+        6,
+        7,
+        8
+      ],
+      "llm": {
+        "latency_ms": 377,
+        "tokens_in": 1358,
+        "tokens_out": 16
+      },
+      "tool_latency_ms": 2,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 115,
+        "deliverable": true,
+        "delivery_fee": 40,
+        "total": 1072,
+        "order_id": null
+      },
+      "msg_index": 20
+    },
+    {
+      "id": 10,
+      "kind": "tool",
+      "name": "place_order",
+      "input": {},
+      "output": {
+        "order_id": "ORD-58213",
+        "status": "placed",
+        "total": 1072
+      },
+      "uses": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "llm": {
+        "latency_ms": 409,
+        "tokens_in": 1421,
+        "tokens_out": 14
+      },
+      "tool_latency_ms": 5,
+      "error": null,
+      "state_after": {
+        "parsed_order": {
+          "items": [
+            {
+              "pizza": "pepperoni",
+              "size": "L",
+              "qty": 2
+            },
+            {
+              "pizza": "veg_supreme",
+              "size": "M",
+              "qty": 1
+            }
+          ],
+          "coupon": "PIZZA20",
+          "area": "Kothrud"
+        },
+        "menu": {
+          "pepperoni": {
+            "S": 199,
+            "M": 299,
+            "L": 399
+          },
+          "veg_supreme": {
+            "S": 249,
+            "M": 349,
+            "L": 449
+          }
+        },
+        "stock": {
+          "pepperoni:L": true,
+          "veg_supreme:M": true
+        },
+        "cart": [
+          {
+            "pizza": "pepperoni",
+            "size": "L",
+            "qty": 2,
+            "unit_price": 399,
+            "line_total": 798
+          },
+          {
+            "pizza": "veg_supreme",
+            "size": "M",
+            "qty": 1,
+            "unit_price": 349,
+            "line_total": 349
+          }
+        ],
+        "subtotal": 1147,
+        "coupon": "PIZZA20",
+        "discount": 115,
+        "deliverable": true,
+        "delivery_fee": 40,
+        "total": 1072,
+        "order_id": "ORD-58213"
+      },
+      "msg_index": 22
+    }
+  ]
+}

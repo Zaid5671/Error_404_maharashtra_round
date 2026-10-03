@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sse-starlette
+openai
+python-dotenv
+pydantic
+xgboost
+pandas
+scikit-learn
+pytest

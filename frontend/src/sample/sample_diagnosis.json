@@ -1,0 +1,49 @@
+{
+  "run_id": "run_sample_coupon",
+  "scores": {
+    "1": 0.06,
+    "2": 0.03,
+    "3": 0.03,
+    "4": 0.02,
+    "5": 0.02,
+    "6": 0.05,
+    "7": 0.87,
+    "8": 0.04,
+    "9": 0.31,
+    "10": 0.18
+  },
+  "ranking": [
+    7,
+    9,
+    10
+  ],
+  "culprit": 7,
+  "reasons": [
+    {
+      "feature": "value_zscore",
+      "label": "Discount % is far from what PIZZA20 usually gives (20%)",
+      "shap": 0.41
+    },
+    {
+      "feature": "first_anomaly",
+      "label": "Earliest step that looks wrong",
+      "shap": 0.22
+    },
+    {
+      "feature": "downstream_anomalies",
+      "label": "2 later steps carry the wrong value forward",
+      "shap": 0.11
+    },
+    {
+      "feature": "upstream_consistency",
+      "label": "Inputs match the steps it reads from",
+      "shap": -0.04
+    }
+  ],
+  "explanation": "Coupon PIZZA20 should take 20% off (Rs 229), but this step returned 10% (Rs 115), so the final total came out Rs 114 too high.",
+  "impact_path": [
+    7,
+    9,
+    10
+  ]
+}

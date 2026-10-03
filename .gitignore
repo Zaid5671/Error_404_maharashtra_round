@@ -1,3 +1,10 @@
 CLAUDE.md
 PS.md
 plan.md
+.env
+backend/runs/*
+!backend/runs/.gitkeep
+node_modules/
+__pycache__/
+.venv/
+dist/
