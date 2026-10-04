@@ -236,6 +236,10 @@ def generate_from_app(
                                               family=family, exclude=exclude if split == "train" else set())
                     if faulted is not None:
                         break
+                if faulted is not None and not any(s["id"] == faulted["fault"]["step_id"] for s in faulted["steps"]):
+                    log(f"skipped  {run_id}: the replay broke before reaching step {faulted['fault']['step_id']} (agent error)")
+                    counts["broken"] += 1
+                    faulted = None
                 if faulted is not None:
                     store.save_run(faulted)
                     f = faulted["fault"]
@@ -257,7 +261,7 @@ def generate_from_app(
     with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(safe, groups))
     summary = {"clean": counts["clean"], "failed": counts["failed"], "harmless": counts["harmless"],
-               "clean_failed": counts["clean_failed"], "held_out_tool": held_out}
+               "clean_failed": counts["clean_failed"], "broken": counts["broken"], "held_out_tool": held_out}
     log(f"{'stopped' if stop.is_set() else 'generated'}: {summary['clean']} clean runs, {summary['failed']} failures "
         f"with a known culprit, {summary['harmless']} faults that didn't change the result")
     return summary

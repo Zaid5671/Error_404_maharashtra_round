@@ -89,3 +89,16 @@ def test_task_values_do_not_link_steps():
     steps, _, _ = run(c)
     # book_flight's people=2 comes from the task, not from the search: it links via the flight and fare only
     assert set(steps[3]["reads"]) == {"llm", "search_flights"}
+
+
+def test_replay_accepts_provider_specific_response_fields():
+    """Groq answers with service_tier "on_demand", which the OpenAI library refuses: the replay must still work."""
+    c = TestClient(sdk_agent.make_app())
+    steps, tapes, _ = run(c)
+    for tape in tapes.values():
+        if tape:
+            tape["service_tier"] = "on_demand"
+    before = sdk_agent.CALLS["llm"]
+    new, _, done = run(c, cached=cached(steps, tapes, 4), override={"step": 4, "output": steps[3]["output"]})
+    assert done["error"] is None and done["check"]["ok"] and not done["diverged"]
+    assert sdk_agent.CALLS["llm"] - before == 1  # only the last LLM call ran; steps 1 and 3 came from the recording

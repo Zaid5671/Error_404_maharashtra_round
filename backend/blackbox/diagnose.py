@@ -73,7 +73,8 @@ def diagnose(agent: str, run: dict) -> Diagnosis:
 def diagnose_with(model: xgb.Booster, norms: dict, run: dict) -> Diagnosis:
     steps = run["steps"]
     rows, notes = run_features(run, norms)
-    X = xgb.DMatrix(np.array([[r[f] for f in FEATURES] for r in rows], dtype=float), feature_names=FEATURES)
+    X = xgb.DMatrix(np.array([[r[f] for f in FEATURES] for r in rows], dtype=float).reshape(-1, len(FEATURES)),
+                    feature_names=FEATURES)
     scores = model.predict(X).tolist()
     order = sorted(range(len(steps)), key=lambda i: -scores[i])
     result = {

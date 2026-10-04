@@ -1,0 +1,18 @@
+[
+  {
+    "status": "error",
+    "kind": "generate",
+    "started": "2026-10-04T08:28:23.473494+00:00",
+    "finished": "2026-10-04T08:33:09.678699+00:00",
+    "result": null,
+    "error": "Please reshape the input data into 2-dimensional matrix."
+  },
+  {
+    "status": "error",
+    "kind": "train",
+    "started": "2026-10-04T08:27:16.430754+00:00",
+    "finished": "2026-10-04T08:27:16.432753+00:00",
+    "result": null,
+    "error": "need at least 10 successful runs and 10 labelled failures in the training split; have 0 and 0"
+  }
+]

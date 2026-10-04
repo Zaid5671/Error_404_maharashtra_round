@@ -103,7 +103,14 @@ class Session:
             value = from_output(output)
         elif saved is not None:
             output, error, raw = saved["output"], saved.get("error"), saved.get("tape")
-            value = from_tape(raw) if raw is not None and from_tape else from_output(output)
+            value = None
+            if raw is not None and from_tape:
+                try:
+                    value = from_tape(raw)
+                except Exception:  # noqa: BLE001 - an odd saved response: rebuild it from the step output instead
+                    value = None
+            if value is None:
+                value = from_output(output)
             llm_stats = saved.get("llm")
         else:
             try:
@@ -235,8 +242,11 @@ def _llm_from_output(output: dict, model: str) -> Any:
 
 
 def _llm_from_tape(raw: Any) -> Any:
+    """The saved response as the client returned it. Fields some providers send but the OpenAI
+    library doesn't accept (Groq's service_tier "on_demand", system_fingerprint quirks) are dropped."""
     from openai.types.chat import ChatCompletion
 
+    raw = {k: v for k, v in raw.items() if k not in ("service_tier", "system_fingerprint", "usage")}
     return ChatCompletion.model_validate(raw)
 
 

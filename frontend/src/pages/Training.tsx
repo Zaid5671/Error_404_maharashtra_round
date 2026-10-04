@@ -165,6 +165,7 @@ function GeneratePanel({ agent, job, setJob, error, setError, onDataChanged }: {
             Made <strong>{job.generated.clean}</strong> clean runs and <strong>{job.generated.failed}</strong> failures with a known culprit
             {job.generated.harmless > 0 && <> ({job.generated.harmless} planted fault{job.generated.harmless > 1 ? 's' : ''} didn’t change the result)</>}.
             {job.generated.held_out_tool && <> Faults on <span className="font-mono">{job.generated.held_out_tool}</span> were kept for testing only.</>}
+            {!!job.generated.broken && <span className="text-bad"> {job.generated.broken} faulted run{job.generated.broken > 1 ? 's' : ''} broke before reaching the fault and {job.generated.broken > 1 ? 'were' : 'was'} skipped.</span>}
           </p>
         )}
         {error && <p className="m-0 text-sm text-bad" role="alert">{error}</p>}

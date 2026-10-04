@@ -51,8 +51,11 @@ def load_runs(agent: str) -> list[dict]:
 
 
 def is_case(run: dict) -> bool:
-    """A failure with a known culprit: what the model is trained and scored on."""
-    return run["outcome"] == "failure" and run.get("fault") is not None
+    """A failure with a known culprit: what the model is trained and scored on. The culprit step
+    must be in the run (a run that broke before reaching its planted fault proves nothing)."""
+    fault = run.get("fault")
+    return (run["outcome"] == "failure" and fault is not None
+            and any(s["id"] == fault["step_id"] for s in run["steps"]))
 
 
 def is_clean(run: dict) -> bool:
@@ -88,7 +91,7 @@ def fit(featured: list[tuple[dict, list[dict]]]) -> xgb.Booster:
 
 def score(model: xgb.Booster, rows: list[dict]) -> list[float]:
     X = np.array([[r[f] for f in FEATURES] for r in rows], dtype=float)
-    return model.predict(xgb.DMatrix(X, feature_names=FEATURES)).tolist()
+    return model.predict(xgb.DMatrix(np.asarray(X, dtype=float).reshape(-1, len(FEATURES)), feature_names=FEATURES)).tolist()
 
 
 def rank_of(run: dict, scores: list[float]) -> int:

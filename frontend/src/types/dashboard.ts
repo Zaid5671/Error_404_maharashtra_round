@@ -124,6 +124,8 @@ export interface GenerateSummary {
   failed: number
   harmless: number
   clean_failed: number
+  /** faulted runs thrown away because the replay broke before reaching the fault */
+  broken?: number
   held_out_tool: string | null
 }
 

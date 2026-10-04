@@ -1,0 +1,28 @@
+{
+  "features": [
+    "surprise",
+    "range_violation",
+    "link_mismatch",
+    "request_mismatch",
+    "error",
+    "unknown_context",
+    "anomalous",
+    "first_anomaly",
+    "anomalies_before",
+    "anomalous_ancestor",
+    "downstream_anomalies",
+    "n_downstream",
+    "position",
+    "is_last"
+  ],
+  "seen_fault_types": [
+    "check_seats:flag",
+    "check_seats:number",
+    "price_booking:number",
+    "price_booking:text",
+    "search_flights:number",
+    "search_flights:text"
+  ],
+  "n_train_runs": 24,
+  "n_train_cases": 12
+}
