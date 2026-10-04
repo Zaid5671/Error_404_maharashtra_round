@@ -2,7 +2,7 @@
 // explain the failing step, replay and try fixes, compare, evaluate, then training and the agents.
 
 import { useEffect, useState } from 'react'
-import { Activity, Bot, FlaskConical, Gauge, GitCompareArrows, History, LayoutDashboard, ListTree, Menu, Search, X } from 'lucide-react'
+import { Bot, FlaskConical, Gauge, GitCompareArrows, History, LayoutDashboard, ListTree, Menu, Search, X } from 'lucide-react'
 import { NavLink, useLocation, useNavigate } from 'react-router'
 import { api } from '@/api/client'
 import { useApi } from '@/api/useApi'
@@ -37,7 +37,7 @@ export function Sidebar() {
   const brand = (
     <div className="flex items-center gap-2.5">
       <div className="grid size-[26px] flex-none place-items-center rounded-[5px] bg-recorder" aria-hidden="true">
-        <Activity className="size-4 text-white" strokeWidth={2.75} />
+        <BoxMark className="size-[19px]" />
       </div>
       <div className="leading-tight">
         <div className="font-display text-lg font-extrabold tracking-[0.01em]">Black Box</div>
@@ -99,5 +99,16 @@ export function Sidebar() {
         </div>
       </aside>
     </>
+  )
+}
+
+/** The brand mark: a solid cube in three faces, split by thin gaps in the tile colour. */
+function BoxMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="white" stroke="var(--recorder)" strokeWidth={1.4} strokeLinejoin="round">
+      <path d="M12 1.5 21.1 6.75 12 12 2.9 6.75Z" />
+      <path d="M2.9 6.75 12 12v10.5L2.9 17.25Z" />
+      <path d="M21.1 6.75 12 12v10.5l9.1-5.25Z" />
+    </svg>
   )
 }
