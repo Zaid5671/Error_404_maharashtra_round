@@ -8,12 +8,13 @@ finished job is also appended to models/<agent>/history.json.
 from __future__ import annotations
 
 import json
+import shutil
 import threading
 import time
 from datetime import datetime, timezone
 
-from blackbox import index
-from blackbox.config import MODELS_DIR
+from blackbox import index, store
+from blackbox.config import MODELS_DIR, REPORTS_DIR
 from blackbox.diagnose import load_model
 from blackbox.evaluate import write_report
 from blackbox.generate import generate_from_app
@@ -69,6 +70,24 @@ def stop(agent: str) -> dict:
     if job and job.get("status") == "running" and job.get("stop"):
         job["stop"].set()
     return status(agent)
+
+
+def reset(agent: str) -> dict:
+    """Start fresh: delete the agent's generated runs, its trained model and its report, so the next
+    Generate & train begins from nothing. Live runs and replays are kept. Other agents are untouched."""
+    if _jobs.get(agent, {}).get("status") == "running":
+        raise RuntimeError("a job is running for this agent: stop it first")
+    removed = 0
+    for path in store.list_runs(agent):
+        if json.loads(path.read_text(encoding="utf-8")).get("source") == "generated":
+            path.unlink()
+            removed += 1
+    shutil.rmtree(MODELS_DIR / agent, ignore_errors=True)
+    (REPORTS_DIR / agent / "report.json").unlink(missing_ok=True)
+    _jobs.pop(agent, None)
+    load_model.cache_clear()
+    index.clear_diagnoses()
+    return {**status(agent), "removed_runs": removed}
 
 
 def _run(agent: str, job: dict, generate: tuple[int, int] | None = None) -> None:

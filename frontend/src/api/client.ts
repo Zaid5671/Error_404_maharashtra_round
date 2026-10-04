@@ -81,6 +81,8 @@ export const api = {
   connectAgent: (body: { name: string; url: string }) => request<AgentInfo>('/agents/connect', body),
   generate: (agent: string, body: { runs_per_kind: number; faults_per_run: number }) => request<TrainJob>(`/generate/${agent}`, body),
   stopGenerate: (agent: string) => request<TrainJob>(`/generate/${agent}/stop`, {}),
+  startFresh: (agent: string) => request<TrainJob & { removed_runs: number }>(`/generate/${agent}/reset`, {}),
+  removeAgent: (agent: string) => request<{ removed: string }>(`/agents/${agent}/remove`, {}),
   agent: (agent: string) => request<AgentDetails>(`/agent/${agent}`),
   runs(agent: string, p: { source?: SourceFilter; outcome?: string; q?: string; sort?: 'recent' | 'suspicion'; limit?: number; offset?: number } = {}) {
     const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]))

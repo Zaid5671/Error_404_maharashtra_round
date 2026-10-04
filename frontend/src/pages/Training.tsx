@@ -61,7 +61,7 @@ export function Training() {
           Want live runs, replay and generated data? <strong>Connect the agent with the SDK</strong> on the Agents page.
         </p>
       )}
-      {sdk && <GeneratePanel agent={agent} {...jobState} />}
+      {sdk && <GeneratePanel agent={agent} {...jobState} onDataChanged={() => setVersion((v) => v + 1)} />}
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="grid gap-4">
           {sdk ? <><DataSummary agent={agent} version={dataKey} />{importPanel}</> : <>{importPanel}<DataSummary agent={agent} version={dataKey} /></>}
@@ -74,10 +74,11 @@ export function Training() {
 
 type JobState = ReturnType<typeof useJob>
 
-function GeneratePanel({ agent, job, setJob, error, setError }: { agent: string } & JobState) {
+function GeneratePanel({ agent, job, setJob, error, setError, onDataChanged }: { agent: string; onDataChanged: () => void } & JobState) {
   const details = useApi(() => api.agent(agent), [agent])
   const [runs, setRuns] = useState(6)
   const [faults, setFaults] = useState(2)
+  const [notice, setNotice] = useState<string | null>(null)
   const logEnd = useRef<HTMLDivElement>(null)
   const generating = job?.status === 'running' && job.kind === 'generate'
   const showJob = job?.kind === 'generate' && job.status !== 'idle'
@@ -96,6 +97,16 @@ function GeneratePanel({ agent, job, setJob, error, setError }: { agent: string 
   }
   async function stop() {
     try { setJob(await api.stopGenerate(agent)) } catch (e) { setError((e as Error).message) }
+  }
+  async function startFresh() {
+    if (!window.confirm(`Start fresh for “${agent}”? This deletes its generated runs, its trained model and its report. Live runs and replays are kept. Other agents are not touched.`)) return
+    setError(null)
+    try {
+      const res = await api.startFresh(agent)
+      setJob(res)
+      onDataChanged()
+      setNotice(`Deleted ${res.removed_runs} generated run${res.removed_runs === 1 ? '' : 's'} and the model. Ready to generate again.`)
+    } catch (e) { setError((e as Error).message) }
   }
 
   const num = 'h-9 w-16 rounded-md border bg-sunk px-2 text-center font-mono text-sm text-foreground'
@@ -157,13 +168,18 @@ function GeneratePanel({ agent, job, setJob, error, setError }: { agent: string 
           </p>
         )}
         {error && <p className="m-0 text-sm text-bad" role="alert">{error}</p>}
+        {notice && !generating && <p className="m-0 text-sm text-good" role="status">{notice}</p>}
         <div className="flex flex-wrap items-center gap-2.5">
-          <button type="button" onClick={start} disabled={job?.status === 'running' || !remote?.online}
+          <button type="button" onClick={() => { setNotice(null); start() }} disabled={job?.status === 'running' || !remote?.online}
             className="rounded-[7px] bg-recorder px-4 py-2.5 font-display font-bold tracking-[0.03em] text-white disabled:opacity-60">
             {generating ? 'Generating…' : 'Generate & train'}
           </button>
           {generating && <button type="button" onClick={stop} className="rounded-md border bg-sunk px-3 py-2 text-sm font-semibold">Stop</button>}
-          <span className="text-xs text-muted-foreground">Runs already made are kept and skipped next time. Trains automatically when it finishes.</span>
+          {!generating && (
+            <button type="button" onClick={startFresh} disabled={job?.status === 'running'}
+              className="rounded-md border border-bad px-3 py-2 text-sm font-semibold text-bad hover:bg-bad-soft disabled:opacity-50">Start fresh</button>
+          )}
+          <span className="text-xs text-muted-foreground">Runs already made are kept and skipped next time. Trains automatically when it finishes. Start fresh deletes them to begin again.</span>
         </div>
       </div>
     </Panel>

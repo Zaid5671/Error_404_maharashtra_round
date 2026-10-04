@@ -19,7 +19,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "RUNS_DIR", tmp_path / "runs")
     for mod in (train, jobs, diagnose):
         monkeypatch.setattr(mod, "MODELS_DIR", tmp_path / "models")
-    for mod in (evaluate, index, api):
+    for mod in (evaluate, index, api, jobs):
         monkeypatch.setattr(mod, "REPORTS_DIR", tmp_path / "reports")
     diagnose.load_model.cache_clear()
     index.clear_diagnoses()

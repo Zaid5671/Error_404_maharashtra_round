@@ -182,6 +182,17 @@ def add_agent(body: NewAgent) -> dict:
         raise HTTPException(400, str(e)) from e
 
 
+@app.post("/agents/{agent}/remove")
+def remove_agent(agent: str) -> dict:
+    """Take a connected (URL) or imported agent out of the app; its data stays on disk."""
+    _known(agent)
+    try:
+        registry.remove(agent)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"removed": agent}
+
+
 class Probe(BaseModel):
     url: str
 
@@ -318,6 +329,18 @@ def start_generating(agent: str, body: GenerateBody) -> dict:
 @app.post("/generate/{agent}/stop")
 def stop_generating(agent: str) -> dict:
     return jobs.stop(_known(agent))
+
+
+@app.post("/generate/{agent}/reset")
+def start_fresh(agent: str) -> dict:
+    """Delete the agent's generated runs, model and report (live runs and replays are kept)."""
+    _known(agent)
+    if registry.is_connected(agent) and not any(a["name"] == agent for a in registry.connected_agents()):
+        raise HTTPException(400, "built-in agents keep their dataset; start fresh is for agents connected by URL")
+    try:
+        return jobs.reset(agent)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e)) from e
 
 
 @app.get("/catalog/{agent}")

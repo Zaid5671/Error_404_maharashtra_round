@@ -59,7 +59,7 @@ export function Agents() {
         ))}
       </div>
 
-      <AgentProfile agent={agent} />
+      <AgentProfile agent={agent} onRemoved={() => { refresh(); navigate('/pizza/agents') }} />
     </div>
   )
 }
@@ -214,13 +214,20 @@ function ImportForm({ onDone }: { onDone: (name: string) => void }) {
 
 // --- the selected agent ----------------------------------------------------------------------------
 
-function AgentProfile({ agent }: { agent: string }) {
+function AgentProfile({ agent, onRemoved }: { agent: string; onRemoved: () => void }) {
   const [version, setVersion] = useState(0)
+  const [removeError, setRemoveError] = useState<string | null>(null)
   const data = useApi(() => api.agent(agent), [agent, version])
   if (data.loading && !data.data) return <Loading what="the agent" />
   if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} />
   const a = data.data
   const kindText = a.kind === 'imported' ? 'Imported: traces only' : a.via === 'sdk' ? 'Connected through the Black Box SDK' : 'Built in: runs and replays in the app'
+  const removable = a.kind === 'imported' || a.via === 'sdk'
+  async function remove() {
+    if (!window.confirm(`Remove “${agent}” from the app? Its runs and model stay on disk: connecting it again under the same name brings them back.`)) return
+    setRemoveError(null)
+    try { await api.removeAgent(agent); onRemoved() } catch (e) { setRemoveError((e as Error).message) }
+  }
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <Panel title={`${a.title} · tools`} sub={a.n_runs ? `${a.tools.length} step types, as seen in ${a.n_runs} runs` : `${a.tools.length} step types, reported by the agent`}>
@@ -274,6 +281,15 @@ function AgentProfile({ agent }: { agent: string }) {
             <dt className="text-muted-foreground">Runs</dt><dd className="m-0"><span className="font-mono">{a.n_runs}</span> <span className="text-xs text-muted-foreground">({a.n_dataset_runs} dataset · {a.n_runs - a.n_dataset_runs} from the app)</span></dd>
             <dt className="text-muted-foreground">Templates</dt><dd className="m-0 font-mono">{a.templates.train.length} train · {a.templates.test.length} test</dd>
           </dl>
+          {removable && (
+            <div className="grid gap-1.5 border-t px-3.5 py-3">
+              <button type="button" onClick={remove} className="w-fit rounded-md border border-bad px-3 py-1.5 text-sm font-semibold text-bad hover:bg-bad-soft">
+                {a.via === 'sdk' ? 'Disconnect agent' : 'Remove agent'}
+              </button>
+              <span className="text-xs text-muted-foreground">Its runs and model stay on disk; add it again under the same name to get them back.</span>
+              {removeError && <span className="text-sm text-bad" role="alert">{removeError}</span>}
+            </div>
+          )}
         </Panel>
         <Panel title="Diagnosis model" sub={<Link to={`/${agent}/training`} className="font-medium text-recorder-ink">Train →</Link>}>
           {a.model ? (

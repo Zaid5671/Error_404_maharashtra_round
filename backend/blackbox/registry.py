@@ -143,3 +143,20 @@ def add_imported(name: str, title: str, description: str) -> dict:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(imported_agents() + [agent], indent=2), encoding="utf-8")
     return agent
+
+
+def remove(name: str) -> None:
+    """Take an agent connected by URL, or an imported agent, out of the app. Its runs, model and
+    report stay on disk, so connecting (or creating) it again under the same name brings them back.
+    Built-in agents can't be removed."""
+    if name in AGENTS:
+        raise ValueError(f"'{name}' is built in and can't be removed")
+    for path, entries in ((_connected_path(), connected_agents()), (_imported_path(), imported_agents())):
+        kept = [a for a in entries if a["name"] != name]
+        if len(kept) != len(entries):
+            path.write_text(json.dumps(kept, indent=2), encoding="utf-8")
+            for key in [k for k in _remote if k[0] == name]:
+                del _remote[key]
+            return
+    raise KeyError(name)
+

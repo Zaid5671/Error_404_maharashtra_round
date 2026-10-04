@@ -18,7 +18,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "RUNS_DIR", tmp_path / "runs")
     for mod in (train, jobs, diagnose):
         monkeypatch.setattr(mod, "MODELS_DIR", tmp_path / "models")
-    for mod in (evaluate, index, api):
+    for mod in (evaluate, index, api, jobs):
         monkeypatch.setattr(mod, "REPORTS_DIR", tmp_path / "reports")
     agent_app = sdk_agent.make_app()
     monkeypatch.setattr(registry, "CLIENT_FACTORY", lambda url: TestClient(agent_app, base_url=url))
@@ -124,3 +124,33 @@ def test_agent_offline_is_reported_plainly(client, monkeypatch):
     assert r.status_code == 503 and "isn't answering" in r.json()["detail"]
     r = client.post("/run", json={"agent": "mini", "task": {"request": "x", "dest": "GOA", "people": 1}, "fault_mode": "none"})
     assert r.status_code == 503 and "not reachable" in r.json()["detail"]  # refused before the run starts
+
+
+def test_start_fresh_and_disconnect(client):
+    connect(client)
+    client.post("/generate/mini", json={"runs_per_kind": 4, "faults_per_run": 2})
+    for _ in range(300):
+        if client.get("/train/mini").json()["status"] != "running":
+            break
+        time.sleep(0.1)
+    task = {"request": "1 person to Delhi", "dest": "DEL", "people": 1}
+    with client.stream("POST", "/run", json={"agent": "mini", "task": task, "fault_mode": "none"}) as r:
+        live_id = sse(r)[0][1]["run_id"]
+    assert client.get("/report/mini").status_code == 200
+
+    # start fresh: generated runs, model and report go; the live run stays; pizza is untouched
+    assert client.post("/generate/pizza/reset").status_code == 400
+    res = client.post("/generate/mini/reset").json()
+    assert res["removed_runs"] > 0 and res["status"] == "idle" and res["history"] == []
+    assert client.get("/runs/mini?source=generated").json()["total"] == 0
+    assert client.get(f"/runs/mini/{live_id}").status_code == 200
+    assert client.get("/report/mini").status_code == 404
+    assert client.post("/diagnose", json={"agent": "mini", "run_id": live_id}).status_code == 503  # no model now
+
+    # disconnect: gone from the app, data kept; connecting again brings the runs back
+    assert client.post("/agents/pizza/remove").status_code == 400
+    assert client.post("/agents/mini/remove").json() == {"removed": "mini"}
+    assert "mini" not in client.get("/agents").json()["agents"]
+    assert client.get("/runs/mini").status_code == 404
+    connect(client)
+    assert client.get(f"/runs/mini/{live_id}").status_code == 200
