@@ -1,6 +1,7 @@
 CLAUDE.md
 PS.md
 plan.md
+sdk_plan.md
 .env
 backend/runs/*
 !backend/runs/.gitkeep
