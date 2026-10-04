@@ -30,9 +30,9 @@ def events(response) -> list[tuple[str, dict]]:
     return out
 
 
-def live_run(client, fake_llm, fault_mode="none") -> tuple[list[tuple[str, dict]], dict]:
+def live_run(client, fake_llm, fault_mode="none", fault_type=None) -> tuple[list[tuple[str, dict]], dict]:
     fake_llm += [list(b) for b in BATCHES]
-    r = client.post("/run", json={"agent": "pizza", "task": ORDER, "fault_mode": fault_mode})
+    r = client.post("/run", json={"agent": "pizza", "task": ORDER, "fault_mode": fault_mode, "fault_type": fault_type})
     assert r.status_code == 200
     evs = events(r)
     run = client.get(f"/runs/pizza/{evs[0][1]['run_id']}").json()
@@ -112,3 +112,18 @@ def test_replay_can_edit_an_llm_step(client, fake_llm):
     assert evs[-1][0] == "run_done"
     new = store.load_run("pizza", evs[0][1]["run_id"])
     assert new["steps"][0]["output"]["area"] == "Bandra"
+
+
+def test_fault_list_and_a_chosen_fault(client, fake_llm):
+    faults = {f["type"]: f for f in client.get("/faults/pizza").json()}
+    assert faults["wrong_delivery"]["seen"] is False and faults["wrong_delivery"]["live"] is True
+    assert faults["wrong_price"]["seen"] is True and faults["llm_misread"]["live"] is False
+    _, run = live_run(client, fake_llm, "surprise", "wrong_delivery")
+    assert run["fault"]["type"] == "wrong_delivery" and run["outcome"] == "failure"
+    bad = client.post("/run", json={"agent": "pizza", "task": ORDER, "fault_mode": "surprise", "fault_type": "llm_misread"})
+    assert bad.status_code == 400
+
+
+def test_report_has_accuracy_per_fault_type(client):
+    report = client.get("/report/pizza").json()
+    assert {t["type"] for t in report["by_type"]} >= {"wrong_delivery", "llm_misread"}

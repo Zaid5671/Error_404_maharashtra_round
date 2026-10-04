@@ -5,7 +5,7 @@
 import type { Step } from '@/types/contract'
 
 export const NODE_W = 156
-export const NODE_H = 94
+export const NODE_H = 116
 const GAP_X = 14
 const GAP_Y = 40
 const BAND_LABEL = 24

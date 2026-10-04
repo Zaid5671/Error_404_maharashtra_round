@@ -1,9 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource/archivo/500.css";
-@import "@fontsource/archivo/700.css";
-@import "@fontsource/archivo/800.css";
+@import "@fontsource-variable/archivo/wdth.css"; /* width axis: condensed gauges, expanded labels */
 @import "@fontsource/ibm-plex-sans/400.css";
 @import "@fontsource/ibm-plex-sans/500.css";
 @import "@fontsource/ibm-plex-sans/600.css";
@@ -13,12 +11,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Black Box tokens: recorder orange (flight recorders are painted orange), cool slate neutrals,
-   semantic good/bad, violet for LLM decisions. Dark mode is the .dark class on <html> (see lib/theme.ts). */
+/* Black Box tokens: recorder orange (flight recorders are painted orange) for actions and selection only,
+   crimson for failure and suspicion, cool slate neutrals, green for success, violet for LLM decisions. Dark mode is the .dark class on <html> (see lib/theme.ts). */
 @theme inline {
     --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-    --font-heading: "Archivo", "Helvetica Neue", Arial, sans-serif;
-    --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-heading: "Archivo Variable", "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-display: "Archivo Variable", "Archivo", "Helvetica Neue", Arial, sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 
     --color-recorder: var(--recorder);
@@ -28,6 +26,7 @@
     --color-good-soft: var(--good-soft);
     --color-bad: var(--bad);
     --color-bad-soft: var(--bad-soft);
+    --color-heat: var(--heat);
     --color-llm: var(--llm);
     --color-llm-soft: var(--llm-soft);
     --color-sunk: var(--sunk);
@@ -79,8 +78,9 @@
     --recorder-soft: #fde7da;
     --good: #157a3c;
     --good-soft: #dcf3e4;
-    --bad: #c3261e;
-    --bad-soft: #fbe2e0;
+    --bad: #b42335;
+    --bad-soft: #f9e0e4;
+    --heat: var(--bad);
     --llm: #5b45d6;
     --llm-soft: #ebe7fd;
     --sunk: #f6f8fa;
@@ -100,7 +100,7 @@
     --muted-foreground: #5a6474;
     --accent: #f2f4f8;
     --accent-foreground: #141820;
-    --destructive: #c3261e;
+    --destructive: #b42335;
     --border: #d9dee6;
     --input: #d9dee6;
     --ring: #e8590c;
@@ -108,7 +108,7 @@
     --chart-2: #5b45d6;
     --chart-3: #157a3c;
     --chart-4: #5a6474;
-    --chart-5: #c3261e;
+    --chart-5: #b42335;
     --radius: 0.5rem;
     --sidebar: #ffffff;
     --sidebar-foreground: #141820;
@@ -126,8 +126,8 @@
     --recorder-soft: #3a2316;
     --good: #3ccf78;
     --good-soft: #153222;
-    --bad: #ff6159;
-    --bad-soft: #3a1917;
+    --bad: #ff5c72;
+    --bad-soft: #3d1820;
     --llm: #a596ff;
     --llm-soft: #251f45;
     --sunk: #11151b;
@@ -147,7 +147,7 @@
     --muted-foreground: #96a0b0;
     --accent: #1c212a;
     --accent-foreground: #e5e9f0;
-    --destructive: #ff6159;
+    --destructive: #ff5c72;
     --border: #29303b;
     --input: #29303b;
     --ring: #ff7a2f;
@@ -155,7 +155,7 @@
     --chart-2: #a596ff;
     --chart-3: #3ccf78;
     --chart-4: #96a0b0;
-    --chart-5: #ff6159;
+    --chart-5: #ff5c72;
     --sidebar: #161a21;
     --sidebar-foreground: #e5e9f0;
     --sidebar-primary: #e5e9f0;
@@ -199,3 +199,14 @@
 @media (prefers-reduced-motion: reduce) {
   .bb-running { animation: none; box-shadow: 0 0 0 3px var(--recorder-soft); }
 }
+
+/* Archivo's width axis: condensed for instrument readings, expanded for panel markings */
+.bb-gauge { font-family: var(--font-display); font-stretch: 75%; font-variant-numeric: tabular-nums; }
+.bb-label { font-family: var(--font-display); font-stretch: 118%; font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-foreground); }
+.bb-title { font-family: var(--font-display); font-stretch: 118%; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* Recorder track */
+@keyframes bb-blink { 50% { opacity: 0.45; } }
+.bb-blink { animation: bb-blink 0.9s ease-in-out infinite; }
+.bb-reused { background: repeating-linear-gradient(135deg, var(--border) 0 4px, transparent 4px 7px); }
+@media (prefers-reduced-motion: reduce) { .bb-blink { animation: none; } }

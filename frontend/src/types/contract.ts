@@ -93,6 +93,13 @@ export interface Report {
   seen: SplitAccuracy
   unseen: SplitAccuracy
   fault_types: { seen: string[]; unseen: string[] }
+  by_type: TypeAccuracy[]
+}
+
+export interface TypeAccuracy extends Accuracy {
+  type: string
+  seen: boolean // trained on this fault type
+  n: number
 }
 
 // --- API request bodies --------------------------------------------------------
@@ -101,6 +108,16 @@ export interface RunRequest {
   agent: string
   task: Json
   fault_mode: 'none' | 'surprise'
+  fault_type?: string | null // with "surprise": hide this fault from the agent's catalogue
+}
+
+/** GET /faults/{agent}: the agent's fault catalogue, for the fault picker. */
+export interface FaultInfo {
+  type: string
+  family: FaultFamily
+  step_name: string
+  seen: boolean // the trained model saw this fault type in training
+  live: boolean // can be hidden in a live run (tool faults)
 }
 
 export interface DiagnoseRequest {

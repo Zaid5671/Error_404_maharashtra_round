@@ -9,6 +9,8 @@ export type Json = Record<string, unknown>
 export interface TaskFormProps {
   task: Json
   onChange: (task: Json) => void
+  /** What GET /catalog/{agent} returned (e.g. the pizza menu), or null while it loads. */
+  formData: Json | null
 }
 
 export interface ResultInfo {

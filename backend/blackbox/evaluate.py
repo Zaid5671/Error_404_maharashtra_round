@@ -45,6 +45,8 @@ def evaluate(agent: str) -> Report:
         seen={**accuracy(seen), "n": len(seen)},
         unseen={**accuracy(unseen), "n": len(unseen)},
         fault_types={"seen": sorted(seen_types), "unseen": sorted(t for t in ranks if t not in seen_types)},
+        by_type=[{"type": t, "seen": t in seen_types, "n": len(rs), **accuracy(rs)}
+                 for t, rs in sorted(ranks.items(), key=lambda kv: (kv[0] not in seen_types, kv[0]))],
     )
 
 

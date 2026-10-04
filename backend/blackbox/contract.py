@@ -105,6 +105,12 @@ class FaultTypes(Model):
     unseen: list[str]
 
 
+class TypeAccuracy(Accuracy):
+    type: str
+    seen: bool  # trained on this fault type
+    n: int
+
+
 class Report(Model):
     agent: str
     n_train_runs: int
@@ -113,6 +119,7 @@ class Report(Model):
     seen: SplitAccuracy
     unseen: SplitAccuracy
     fault_types: FaultTypes
+    by_type: list[TypeAccuracy]
 
 
 # --- API request bodies --------------------------------------------------------
@@ -122,6 +129,15 @@ class RunRequest(Model):
     agent: str
     task: dict[str, Any]
     fault_mode: Literal["none", "surprise"]
+    fault_type: str | None = None  # with "surprise": hide this fault from the agent's catalogue
+
+
+class FaultInfo(Model):
+    type: str
+    family: FaultFamily
+    step_name: str
+    seen: bool  # the trained model saw this fault type in training
+    live: bool  # can be hidden in a live run (tool faults)
 
 
 class DiagnoseRequest(Model):

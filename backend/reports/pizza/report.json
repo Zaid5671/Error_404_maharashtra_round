@@ -27,5 +27,49 @@
       "llm_misread",
       "wrong_delivery"
     ]
-  }
+  },
+  "by_type": [
+    {
+      "top1": 0.0,
+      "top3": 0.0,
+      "type": "stock_lie",
+      "seen": true,
+      "n": 5
+    },
+    {
+      "top1": 1.0,
+      "top3": 1.0,
+      "type": "wrong_cart_line",
+      "seen": true,
+      "n": 39
+    },
+    {
+      "top1": 0.9231,
+      "top3": 1.0,
+      "type": "wrong_discount",
+      "seen": true,
+      "n": 26
+    },
+    {
+      "top1": 1.0,
+      "top3": 1.0,
+      "type": "wrong_price",
+      "seen": true,
+      "n": 33
+    },
+    {
+      "top1": 0.6053,
+      "top3": 0.7368,
+      "type": "llm_misread",
+      "seen": false,
+      "n": 38
+    },
+    {
+      "top1": 1.0,
+      "top3": 1.0,
+      "type": "wrong_delivery",
+      "seen": false,
+      "n": 36
+    }
+  ]
 }

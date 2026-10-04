@@ -1,16 +1,17 @@
 // The pizza agent's task form and its collapsed summary.
 
 import { Minus, Plus } from 'lucide-react'
-import type { Order, OrderItem, Size } from '@/types/pizza'
+import type { Catalog, Order, OrderItem, Size } from '@/types/pizza'
 import type { Json, TaskFormProps } from '../types'
-import catalog from './catalog.json'
+import fallback from './catalog.json'
 import { pizzaName } from './labels'
 
 const field = 'grid gap-1 text-xs font-medium text-muted-foreground'
 const control = 'h-8 min-w-0 rounded-md border bg-sunk px-2 text-sm text-foreground'
-const COUPON_LABEL: Record<string, string> = Object.fromEntries(catalog.coupons.map((c) => [c.code, c.label]))
 
-export function OrderForm({ task, onChange }: TaskFormProps) {
+export function OrderForm({ task, onChange, formData }: TaskFormProps) {
+  const catalog = (formData ?? fallback) as unknown as Catalog // the server's menu; the bundled copy until it loads
+  const couponLabel = Object.fromEntries(catalog.coupons.map((c) => [c.code, c.label]))
   const order = task as unknown as Order
   const update = (patch: Partial<Order>) => onChange({ ...order, ...patch } as unknown as Json)
   const setItem = (i: number, patch: Partial<OrderItem>) =>
@@ -57,7 +58,7 @@ export function OrderForm({ task, onChange }: TaskFormProps) {
           </select>
         </label>
       </div>
-      {order.coupon && <p className="m-0 text-xs text-muted-foreground">{COUPON_LABEL[order.coupon]}</p>}
+      {order.coupon && <p className="m-0 text-xs text-muted-foreground">{couponLabel[order.coupon]}</p>}
     </div>
   )
 }

@@ -1,12 +1,11 @@
-// The shared run state for every screen. Runs arrive as the SSE events from the contract
-// (mock stream now, POST /run later), so applyEvent is the only way a run changes.
+// A run as it streams in. Runs arrive as the SSE events from the contract (POST /run or
+// POST /replay), so applyEvent is the only way a streaming run changes; loadRun shows a saved run.
+// Live Run uses the shared store (useLiveRun); Replay makes its own with createRunStore().
 
 import { create } from 'zustand'
-import type { Outcome, RunEvent, Step } from '@/types/contract'
+import type { Outcome, Run, RunEvent, Step } from '@/types/contract'
 
-export type Page = 'live' | 'diagnosis' | 'replay' | 'compare' | 'report'
 export type Status = 'idle' | 'running' | 'done' | 'error'
-export type FaultMode = 'none' | 'surprise'
 type Json = Record<string, unknown>
 
 export interface RunMeta {
@@ -23,12 +22,8 @@ export interface RunResult {
   expected: Json | null
 }
 
-interface RunState {
-  page: Page
-  agent: string
-  faultMode: FaultMode
+export interface RunState {
   status: Status
-  runFaultMode: FaultMode // the mode the current run was started with
   meta: RunMeta | null
   steps: Step[]
   running: { id: number; name: string } | null // the step being executed right now
@@ -36,70 +31,83 @@ interface RunState {
   result: RunResult | null
   error: string | null
   selectedId: number | null
-  hasRun: boolean
-  setPage: (page: Page) => void
-  setFaultMode: (mode: FaultMode) => void
+  /** The fault choice this run was started with (live runs only; a loaded run has null). */
+  startedWith: { mode: FaultMode; type: string | null } | null
   select: (id: number | null) => void
-  beginRun: () => void
+  begin: (startedWith?: RunState['startedWith']) => void
   applyEvent: (event: RunEvent) => void
+  loadRun: (run: Run) => void
 }
 
-export const useRunStore = create<RunState>()((set, get) => ({
-  page: 'live',
-  agent: 'pizza',
+const empty = { status: 'idle' as Status, meta: null, steps: [], running: null, reusedIds: [], result: null, error: null, selectedId: null, startedWith: null }
+
+export function createRunStore() {
+  return create<RunState>()((set, get) => ({
+    ...empty,
+    select: (selectedId) => set({ selectedId }),
+    begin: (startedWith = null) => set({ ...empty, status: 'running', startedWith }),
+
+    applyEvent: (event) => {
+      switch (event.event) {
+        case 'run_started':
+          set({ meta: event.data, status: 'running' })
+          break
+        case 'step_started':
+          set({ running: event.data })
+          break
+        case 'step_done': {
+          const step = event.data.step
+          set((s) => ({ steps: [...s.steps.filter((x) => x.id !== step.id), step], running: null }))
+          break
+        }
+        case 'step_reused':
+          set((s) => ({ reusedIds: [...s.reusedIds, event.data.id] }))
+          break
+        case 'run_done':
+          set({ result: event.data, status: 'done', running: null, selectedId: get().steps.at(-1)?.id ?? null })
+          break
+        case 'error':
+          set({ status: 'error', error: event.data.message, running: null })
+          break
+      }
+    },
+
+    loadRun: (run) =>
+      set({
+        ...empty,
+        status: 'done',
+        meta: { run_id: run.run_id, agent: run.agent, task: run.task, request_text: run.request_text },
+        steps: run.steps,
+        result: { run_id: run.run_id, outcome: run.outcome, actual: run.actual, expected: run.expected },
+        selectedId: run.steps.at(-1)?.id ?? null,
+      }),
+  }))
+}
+
+export const useLiveRun = createRunStore()
+
+// --- session: choices that outlive one screen --------------------------------------------------
+
+export type FaultMode = 'none' | 'surprise' | 'choose'
+
+interface Session {
+  faultMode: FaultMode
+  faultType: string | null // with "choose"
+  /** The latest replay, so the journey bar can link to Compare. */
+  lastReplay: { agent: string; original: string; replay: string } | null
+  /** The task being edited in each agent's form, kept while the user moves between screens. */
+  drafts: Record<string, Json>
+  setDraft: (agent: string, task: Json) => void
+  setFault: (mode: FaultMode, type?: string | null) => void
+  setLastReplay: (r: Session['lastReplay']) => void
+}
+
+export const useSession = create<Session>()((set) => ({
   faultMode: 'none',
-  status: 'idle',
-  runFaultMode: 'none',
-  meta: null,
-  steps: [],
-  running: null,
-  reusedIds: [],
-  result: null,
-  error: null,
-  selectedId: null,
-  hasRun: false,
-
-  setPage: (page) => set({ page }),
-  setFaultMode: (faultMode) => set({ faultMode }),
-  select: (selectedId) => set({ selectedId }),
-
-  beginRun: () =>
-    set({
-      status: 'running',
-      runFaultMode: get().faultMode,
-      meta: null,
-      steps: [],
-      running: null,
-      reusedIds: [],
-      result: null,
-      error: null,
-      selectedId: null,
-    }),
-
-  applyEvent: (event) => {
-    switch (event.event) {
-      case 'run_started':
-        set({ meta: event.data, status: 'running' })
-        break
-      case 'step_started':
-        set({ running: event.data })
-        break
-      case 'step_done': {
-        const step = event.data.step
-        set((s) => ({ steps: [...s.steps.filter((x) => x.id !== step.id), step], running: null }))
-        break
-      }
-      case 'step_reused':
-        set((s) => ({ reusedIds: [...s.reusedIds, event.data.id] }))
-        break
-      case 'run_done': {
-        const steps = get().steps
-        set({ result: event.data, status: 'done', hasRun: true, selectedId: steps.at(-1)?.id ?? null })
-        break
-      }
-      case 'error':
-        set({ status: 'error', error: event.data.message, running: null })
-        break
-    }
-  },
+  faultType: null,
+  lastReplay: null,
+  drafts: {},
+  setDraft: (agent, task) => set((s) => ({ drafts: { ...s.drafts, [agent]: task } })),
+  setFault: (faultMode, faultType = null) => set({ faultMode, faultType }),
+  setLastReplay: (lastReplay) => set({ lastReplay }),
 }))

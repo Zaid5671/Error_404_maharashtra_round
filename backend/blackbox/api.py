@@ -26,8 +26,8 @@ from sse_starlette import EventSourceResponse
 from blackbox import store
 from blackbox.adapter import AgentAdapter, EventFn, QuotaExhausted
 from blackbox.config import REPORTS_DIR
-from blackbox.contract import DiagnoseRequest, Diagnosis, ReplayRequest, Report, Run, RunRequest
-from blackbox.diagnose import diagnose
+from blackbox.contract import DiagnoseRequest, Diagnosis, FaultInfo, ReplayRequest, Report, Run, RunRequest
+from blackbox.diagnose import diagnose, load_model
 from blackbox.injector import live_fault
 from blackbox.registry import AGENTS, get_agent
 from blackbox.replay import ReplayError, check_edit, new_replay_id, replay
@@ -134,6 +134,18 @@ def catalog(agent: str) -> dict:
     return _adapter(agent).form_data()
 
 
+@app.get("/faults/{agent}")
+def faults(agent: str) -> list[FaultInfo]:
+    """The agent's fault catalogue for the fault picker. `seen` says whether the model trained on it."""
+    adapter = _adapter(agent)
+    try:
+        seen = set(load_model(agent)[2]["seen_fault_types"])
+    except FileNotFoundError:
+        seen = set()
+    return [FaultInfo(type=f.type, family=f.family, step_name=f.step_name, seen=f.type in seen, live=f.family == "tool")
+            for f in adapter.faults()]
+
+
 @app.post("/run")
 async def run(body: RunRequest) -> EventSourceResponse:
     adapter = _adapter(body.agent)
@@ -141,14 +153,18 @@ async def run(body: RunRequest) -> EventSourceResponse:
         task = adapter.task_from_input(body.task)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+    if body.fault_type is not None:
+        live = {f.type for f in adapter.faults() if f.family == "tool"}
+        if body.fault_mode != "surprise" or body.fault_type not in live:
+            raise HTTPException(400, f"'{body.fault_type}' can't be hidden in a live run; choose one of {sorted(live)}")
     run_id = f"live_{uuid.uuid4().hex[:8]}"
 
     def work(on_event: EventFn) -> dict:
         on_event("run_started", {"run_id": run_id, "agent": body.agent, "task": task["task"],
                                  "request_text": task["request_text"]})
         steps: list[dict] = []
-        hook, fault = (live_fault(adapter, task, steps, RNG()) if body.fault_mode == "surprise"
-                       else (None, {}))
+        hook, fault = (live_fault(adapter, task, steps, RNG(), fault_type=body.fault_type)
+                       if body.fault_mode == "surprise" else (None, {}))
 
         def track(event: str, data: dict) -> None:
             if event == "step_done":

@@ -54,6 +54,7 @@ export function pizzaResultLine({ outcome, expected, actual }: ResultInfo): stri
   if (outcome === 'success') {
     return act ? `Order placed for ${rupees(act.total)}, matching the expected total.` : "Correctly refused: we don't deliver there."
   }
+  if (exp && act && exp.total === act.total) return `The total looks right (${rupees(act.total)}), but the order itself is wrong.`
   if (exp && act) return `Expected ${rupees(exp.total)}, but the agent charged ${rupees(act.total)}.`
   if (exp) return `The agent didn't place the order (expected ${rupees(exp.total)}).`
   return `The agent placed an order for ${rupees(act!.total)}, but this area isn't deliverable.`
