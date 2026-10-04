@@ -1,4 +1,5 @@
-// The run graph used by every screen: steps as nodes, `uses` as arrows, LLM turns as bands.
+// The run graph used by every screen: steps as nodes, `uses` as arrows, LLM turns as bands. Arrows that
+// only repeat a longer route are hidden until a step is selected; arrows that skip rows are dashed.
 // Fits itself to the panel as steps arrive; zoom and pan with the mouse or the controls.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -30,6 +31,26 @@ export interface RunGraphProps {
 }
 
 const nodeTypes = { step: StepNode, band: BandNode }
+
+/** Links "u-s" where s also reaches u through another step it uses (transitive reduction). */
+function shortcutEdges(steps: Step[]): Set<string> {
+  const ancestors = new Map<number, Set<number>>()
+  for (const s of steps) {
+    const all = new Set<number>()
+    for (const u of s.uses) {
+      all.add(u)
+      ancestors.get(u)?.forEach((a) => all.add(a))
+    }
+    ancestors.set(s.id, all)
+  }
+  const out = new Set<string>()
+  for (const s of steps) {
+    for (const u of s.uses) {
+      if (s.uses.some((w) => w !== u && ancestors.get(w)?.has(u))) out.add(`${u}-${s.id}`)
+    }
+  }
+  return out
+}
 
 function Graph(props: RunGraphProps & { layout: GraphLayout }) {
   const { steps, label, selectedId, onSelect, runningId, final, scores, culpritId, impactPath, cachedIds, editedId, changedIds, tags, layout } = props
@@ -66,32 +87,37 @@ function Graph(props: RunGraphProps & { layout: GraphLayout }) {
     return [...bands, ...stepNodes]
   }, [layout, steps, label, runningId, selectedId, final, culpritId, scores, cachedIds, editedId, changedIds, tags])
 
+  const shortcuts = useMemo(() => shortcutEdges(steps), [steps])
   const edges = useMemo<Edge[]>(
     () =>
       steps.flatMap((s) =>
         s.uses
           .filter((u) => u in layout.positions)
-          .map((u) => {
+          .flatMap((u) => {
             const sameRow = layout.rowOf[u] === layout.rowOf[s.id]
             const hot = selectedId === s.id || selectedId === u
+            // a shortcut repeats a longer route (A -> B -> C makes A -> C redundant): drawn only
+            // while one of its steps is selected
+            if (shortcuts.has(`${u}-${s.id}`) && !hot) return []
+            const long = layout.rowOf[s.id] - layout.rowOf[u] > 1 // skips rows, so it runs behind other steps
             const impact = impactPath?.includes(u) && impactPath.includes(s.id)
-            const style = impact
-              ? { stroke: 'var(--bad)', strokeWidth: 2.4 }
-              : hot
-                ? { stroke: 'var(--recorder)', strokeWidth: 2 }
-                : impactPath?.length ? { strokeWidth: 1.2, opacity: 0.35 } : { strokeWidth: 1.4 }
-            return {
+            const style = hot
+              ? { stroke: impact ? 'var(--bad)' : 'var(--recorder)', strokeWidth: 2.2 }
+              : impact
+                ? { stroke: 'var(--bad)', strokeWidth: long ? 1.6 : 2.4, opacity: long ? 0.55 : 1 }
+                : impactPath?.length ? { strokeWidth: 1.2, opacity: 0.3 } : { strokeWidth: long ? 1.1 : 1.4, opacity: long ? 0.5 : 1 }
+            return [{
               id: `e${u}-${s.id}`,
               source: String(u),
               target: String(s.id),
               sourceHandle: sameRow ? 'r' : undefined,
               targetHandle: sameRow ? 'l' : undefined,
               type: sameRow ? 'smoothstep' : 'default',
-              style,
-            }
+              style: long && !hot ? { ...style, strokeDasharray: '5 4' } : style,
+            }]
           }),
       ),
-    [steps, layout, selectedId, impactPath],
+    [steps, layout, selectedId, impactPath, shortcuts],
   )
 
   useEffect(() => {
