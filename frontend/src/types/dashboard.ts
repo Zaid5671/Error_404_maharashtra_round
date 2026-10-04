@@ -78,9 +78,25 @@ export interface Dataset {
 export interface AgentInfo {
   name: string
   kind: 'connected' | 'imported'
+  /** connected agents: built into the backend, or connected by URL through the SDK */
+  via?: 'builtin' | 'sdk'
+  url?: string
+  online?: boolean
   title: string
   description: string
   created: string | null
+}
+
+/** What an SDK agent says about itself (GET /info, through POST /agents/probe). */
+export interface ProbeInfo {
+  name: string
+  title: string
+  description: string
+  sdk: string
+  tools: { name: string; kind: string; description: string }[]
+  kinds: string[]
+  examples: { kind: string; task: Record<string, unknown> }[]
+  has_check: boolean
 }
 
 export interface AgentDetails extends AgentInfo {
@@ -91,6 +107,7 @@ export interface AgentDetails extends AgentInfo {
   can_run: boolean
   n_runs: number
   n_dataset_runs: number
+  remote: { url: string; online: boolean; sdk?: string; kinds?: string[]; examples?: number; has_check?: boolean } | null
 }
 
 export interface TrainResult {
@@ -102,14 +119,26 @@ export interface TrainResult {
   unseen_n: number
 }
 
+export interface GenerateSummary {
+  clean: number
+  failed: number
+  harmless: number
+  clean_failed: number
+  held_out_tool: string | null
+}
+
 export interface TrainJob {
   status: 'idle' | 'running' | 'done' | 'error'
+  /** train: train + evaluate; generate: generate runs first (agents connected by URL) */
+  kind: 'train' | 'generate' | null
+  progress: { done: number; total: number; stage: 'generate' | 'train' | 'done' } | null
+  generated: GenerateSummary | null
   log: string[]
   started: string | null
   finished: string | null
   result: TrainResult | null
   error: string | null
-  history: { status: string; started: string; finished: string; result: TrainResult | null; error: string | null }[]
+  history: { status: string; kind?: string; started: string; finished: string; result: TrainResult | null; error: string | null }[]
 }
 
 export interface ImportResult {

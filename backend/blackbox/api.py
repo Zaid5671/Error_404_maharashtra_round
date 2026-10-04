@@ -239,6 +239,9 @@ def agent_details(agent: str) -> dict:
             sdk = adapter.info(fresh=True)
             remote |= {"sdk": sdk.get("sdk"), "kinds": sdk.get("kinds", []), "examples": len(sdk.get("examples", [])),
                        "has_check": bool(sdk.get("has_check"))}
+            if not tools:  # no runs yet: list the tools the agent reports
+                tools = [{"name": t["name"], "kind": t["kind"], "count": 0, "reads": [], "writes": [],
+                          "description": t.get("description")} for t in sdk.get("tools", [])]
     return {**base, "llm": info.get("llm"), "tools": tools, "templates": data["templates"],
             "model": meta, "can_run": connected, "n_runs": len(index.summaries(agent)), "n_dataset_runs": data["total"],
             "remote": remote}

@@ -3,7 +3,7 @@
 
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { Diagnosis, FaultInfo, ReplayRequest, Report, Run, RunEvent, RunRequest } from '@/types/contract'
-import type { AgentDetails, AgentInfo, Dataset, ImportResult, Overview, ReplayRow, RunPage, SourceFilter, TrainJob } from '@/types/dashboard'
+import type { AgentDetails, AgentInfo, Dataset, ImportResult, Overview, ProbeInfo, ReplayRow, RunPage, SourceFilter, TrainJob } from '@/types/dashboard'
 
 const BASE = '/api'
 type Json = Record<string, unknown>
@@ -77,6 +77,10 @@ const runs = new Map<string, Promise<Run>>()
 export const api = {
   agents: () => request<{ agents: string[]; items: AgentInfo[] }>('/agents'),
   addAgent: (body: { name: string; title: string; description: string }) => request<AgentInfo>('/agents', body),
+  probeAgent: (url: string) => request<ProbeInfo>('/agents/probe', { url }),
+  connectAgent: (body: { name: string; url: string }) => request<AgentInfo>('/agents/connect', body),
+  generate: (agent: string, body: { runs_per_kind: number; faults_per_run: number }) => request<TrainJob>(`/generate/${agent}`, body),
+  stopGenerate: (agent: string) => request<TrainJob>(`/generate/${agent}/stop`, {}),
   agent: (agent: string) => request<AgentDetails>(`/agent/${agent}`),
   runs(agent: string, p: { source?: SourceFilter; outcome?: string; q?: string; sort?: 'recent' | 'suspicion'; limit?: number; offset?: number } = {}) {
     const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]))

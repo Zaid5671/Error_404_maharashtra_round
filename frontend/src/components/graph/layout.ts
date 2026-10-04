@@ -57,7 +57,7 @@ export function layoutSteps(steps: Step[]): GraphLayout {
   steps.forEach((s) => rows[rowOf[s.id]].push(s.id))
 
   const widest = Math.max(1, ...rows.map((r) => r.length))
-  const width = widest * (NODE_W + GAP_X) - GAP_X + PAD * 2
+  const width = Math.max(widest * (NODE_W + GAP_X) - GAP_X + PAD * 2, 250) // room for the turn label
   const rowY: number[] = []
   let y = PAD
   for (let r = 0; r < nRows; r++) {

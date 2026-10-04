@@ -8,10 +8,11 @@ import { api } from '@/api/client'
 import { useApi } from '@/api/useApi'
 import { applyTheme, loadTheme, onSystemThemeChange, THEME_ORDER, type ThemeChoice } from '@/lib/theme'
 import { cn } from '@/lib/utils'
+import { OnlineDot } from '@/components/AgentBadges'
 import { useAgent } from './agentContext'
 
 export function Sidebar() {
-  const { agent, agents, online } = useAgent()
+  const { agent, agents, info, online } = useAgent()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
@@ -66,7 +67,13 @@ export function Sidebar() {
         </div>
 
         <label className="grid gap-1 text-xs font-medium text-muted-foreground" htmlFor="agent-switch">
-          Agent
+          <span className="flex items-center justify-between gap-2">Agent
+            {info?.via === 'sdk' && (
+              <span className="inline-flex items-center gap-1.5 font-normal" title={info.url}>
+                <OnlineDot online={info.online} />{info.online ? 'online' : 'offline'}
+              </span>
+            )}
+          </span>
           <select id="agent-switch" className="h-9 rounded-md border bg-sunk px-2 text-sm text-foreground" value={agent}
             onChange={(e) => { setOpen(false); navigate(`/${e.target.value}`) }}>
             {(agents.length ? agents : [{ name: agent, kind: 'connected' as const }]).map((a) => (
