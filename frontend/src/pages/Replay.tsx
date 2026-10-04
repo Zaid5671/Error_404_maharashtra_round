@@ -117,7 +117,7 @@ function ReplayScreen({ agent, run, diag }: { agent: string; run: Run; diag: Dia
           </div>
           <p className="m-0 text-xs text-muted-foreground">
             Your edit replaces this step’s {target.kind === 'llm' ? 'choice' : 'output'} exactly, so fix every value that is wrong.{' '}
-            {stepId > 1 ? `Steps 1–${stepId - 1} are reused from the recording; the rest` : 'Every step'} run again with the real LLM.
+            {stepId > 2 ? `Steps 1–${stepId - 1} are reused from the recording; the rest` : stepId === 2 ? 'Step 1 is reused from the recording; the rest' : 'Every step'} run again with the real LLM.
           </p>
           {started ? (
             <button type="button" className="rounded-[7px] border bg-sunk p-2 font-medium" disabled={running}
@@ -138,7 +138,7 @@ function ReplayScreen({ agent, run, diag }: { agent: string; run: Run; diag: Dia
           {!started && <><State tone="idle">Ready</State><span className="min-w-[200px] flex-1">Correct the wrong value on the left, then replay. Greyed steps will be reused, not re-run.</span></>}
           {running && <><State tone="running">● Replaying</State><span className="min-w-[200px] flex-1">
             {replay.running ? <>Step <strong>#{replay.running.id}</strong> · <span className="font-mono">{replay.running.name}</span></> : 'Restoring the checkpoint…'}
-            {stepId > 1 && <span className="mt-0.5 block text-[12.5px] text-muted-foreground">Steps 1–{stepId - 1} came from the checkpoint instantly.</span>}</span></>}
+            {stepId > 1 && <span className="mt-0.5 block text-[12.5px] text-muted-foreground">{stepId > 2 ? `Steps 1–${stepId - 1}` : 'Step 1'} came from the checkpoint instantly.</span>}</span></>}
           {replay.status === 'error' && <><State tone="bad">Error</State><span className="min-w-[200px] flex-1">{replay.error}</span></>}
           {replay.status === 'done' && result && (
             <>

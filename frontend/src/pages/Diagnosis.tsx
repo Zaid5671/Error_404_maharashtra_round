@@ -44,7 +44,7 @@ export function Diagnosis() {
         </div>
         <RunGraph steps={run.steps} label={plugin.stepLabel} final={final} selectedId={selected} onSelect={setSelected}
           scores={failed ? diag.scores : undefined} culpritId={diag.culprit} impactPath={diag.impact_path}
-          tags={(s) => s.id === diag.culprit ? [['bad', 'CULPRIT'], ['score', pct(diag.scores[String(s.id)])]]
+          tags={(s) => s.id === diag.culprit ? [['bad', 'CULPRIT']]
             : diag.impact_path.includes(s.id) ? [['plain', 'AFFECTED']] : []} />
         <RecorderTrack title="Suspicion" right={diag.culprit ? `culprit · step ${diag.culprit}` : 'all clear'}
           ticks={run.steps.map((s) => ({ id: s.id, name: s.name, kind: s.id === diag.culprit ? 'culprit' : 'heat', heat: failed ? diag.scores[String(s.id)] : 0 }))} />
@@ -87,6 +87,10 @@ function Finding({ agent, run, diag }: { agent: string; run: Run; diag: Diagnosi
   const culprit = diag.culprit!
   const max = Math.max(...diag.reasons.map((r) => r.shap), 1e-9)
   const label = 'bb-label block'
+  const score = (id: number) => diag.scores[String(id)] ?? 0
+  const next = diag.ranking[1]
+  const ratio = next != null && score(next) > 0 ? score(culprit) / score(next) : Infinity
+  const times = ratio >= 100 ? '>99×' : ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`
 
   return (
     <Panel className="border-bad" headerClassName="border-bad bg-bad-soft"
@@ -97,20 +101,25 @@ function Finding({ agent, run, diag }: { agent: string; run: Run; diag: Diagnosi
           <div className="font-display text-xl leading-tight font-bold text-balance">
             Step {culprit} · <span className="font-mono text-[17px]">{name[culprit]}</span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="bb-gauge text-[34px] leading-none font-bold text-bad">{pct(diag.scores[String(culprit)])}</span>
-            <span className="text-xs text-muted-foreground">suspicion score</span>
-          </div>
+          {next != null ? (
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="bb-gauge text-[34px] leading-none font-bold text-bad">{times}</span>
+              <span className="text-xs text-muted-foreground">as suspicious as the next step (#{next} {name[next]})</span>
+            </div>
+          ) : null}
+          <span className="text-xs text-muted-foreground">
+            Ranked #1 of {run.steps.length} steps · suspicion score <span className="font-mono">{pct(score(culprit))}</span>
+          </span>
         </div>
         <p className="m-0 text-[13.5px] leading-relaxed">{diag.explanation}</p>
 
         <div className="grid gap-2.5">
           <span className={label}>Why this step</span>
+          <span className="-mt-1.5 text-xs text-muted-foreground">Evidence from the run. A longer bar raised the suspicion more.</span>
           {diag.reasons.map((r) => (
-            <div key={r.feature} className="grid gap-1">
-              <div className="flex justify-between gap-2.5 text-[12.5px]">
+            <div key={r.feature} className="grid gap-1" title={`Weight ${r.shap.toFixed(2)}`}>
+              <div className="text-[12.5px]">
                 <span className="min-w-0 break-words">{r.label}</span>
-                <span className="font-mono text-muted-foreground">+{r.shap.toFixed(1)}</span>
               </div>
               <div className="h-[7px] overflow-hidden rounded bg-sunk"><div className="h-full rounded bg-bad" style={{ width: `${(r.shap / max) * 100}%` }} /></div>
             </div>

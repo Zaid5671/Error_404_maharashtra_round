@@ -178,7 +178,7 @@ def agent_details(agent: str) -> dict:
     tools = [{**t, "description": descriptions.get(t["name"])} for t in index.tool_usage(agent)]
     data = index.dataset(agent, adapter.templates() if adapter else [])
     return {**base, "llm": info.get("llm"), "tools": tools, "templates": data["templates"],
-            "model": meta, "can_run": connected, "n_runs": len(index.summaries(agent))}
+            "model": meta, "can_run": connected, "n_runs": len(index.summaries(agent)), "n_dataset_runs": data["total"]}
 
 
 @app.get("/runs/{agent}")

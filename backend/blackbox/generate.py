@@ -63,14 +63,15 @@ def run_group(adapter: AgentAdapter, template_id: str, seed: int, args: argparse
     if clean["outcome"] != "success":
         return  # the agent erred on its own: kept for the demo, not used to make labelled faults
 
+    # run ids never name the fault: the app shows them next to "Reveal hidden fault"
     jobs: list[tuple[str, str, str | None]] = [(f"{clean_id}__tool{j}", "tool", None) for j in range(args.tool_faults)]
     if split == "test" and test_index is not None:  # LLM faults are unseen types: test runs only
         if test_index < args.misread:
-            jobs.append((f"{clean_id}__llm_misread", "llm", "llm_misread"))
+            jobs.append((f"{clean_id}__llm0", "llm", "llm_misread"))
         if test_index < args.choice:
-            jobs.append((f"{clean_id}__llm_choice", "llm", "llm_wrong_choice"))
+            jobs.append((f"{clean_id}__llm1", "llm", "llm_wrong_choice"))
         if test_index < args.substitute:
-            jobs.append((f"{clean_id}__llm_substitute", "llm", "llm_wrong_substitute"))
+            jobs.append((f"{clean_id}__llm2", "llm", "llm_wrong_substitute"))
 
     used: set[str] = set()
     for run_id, family, fault_type in jobs:

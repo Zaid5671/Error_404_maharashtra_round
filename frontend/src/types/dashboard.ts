@@ -90,6 +90,7 @@ export interface AgentDetails extends AgentInfo {
   model: { features: string[]; seen_fault_types: string[]; n_train_runs: number; n_train_cases: number } | null
   can_run: boolean
   n_runs: number
+  n_dataset_runs: number
 }
 
 export interface TrainResult {

@@ -135,7 +135,7 @@ function DataSummary({ agent, version }: { agent: string; version: number }) {
       {!d ? <p className="m-0 p-3.5 text-sm text-muted-foreground">{data.error ?? 'Loading…'}</p> : (
         <div className="grid gap-3 p-3.5 text-[13px]">
           <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
-            {([['Runs', d.total], ['Training split', d.train], ['Clean successes (train)', cleanTrain], ['Known failures (train)', casesTrain]] as const).map(([k, v]) => (
+            {([['Dataset runs', d.total], ['Training split', d.train], ['Clean successes (train)', cleanTrain], ['Known failures (train)', casesTrain]] as const).map(([k, v]) => (
               <div key={k}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="bb-gauge m-0 text-2xl font-semibold">{v}</dd></div>
             ))}
           </dl>

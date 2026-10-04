@@ -25,7 +25,8 @@ export function Report() {
         <Big label="Top-1 accuracy" value={pct(r.overall.top1)} note="Culprit ranked #1 on failed test runs" />
         <Big label="Top-3 accuracy" value={pct(r.overall.top3)} note="Culprit among the top 3 suspects" />
         <Big label="Unseen faults · top-1" value={pct(r.unseen.top1)} note="Fault types the model never trained on" />
-        <Big label="Test / train runs" value={String(r.n_test_runs)} sub={`/ ${r.n_train_runs}`} note="Test orders come from templates never seen in training" />
+        <Big label="Failed test runs scored" value={String(r.n_test_runs)}
+          note={`Each has a planted fault, from templates never seen in training · model trained on ${r.n_train_runs} runs`} />
       </div>
       <div className="grid items-start gap-4 grid-cols-1 lg:grid-cols-2">
         <Panel title="Seen vs unseen faults" sub={<Legend />}>

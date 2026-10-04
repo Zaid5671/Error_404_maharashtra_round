@@ -127,14 +127,14 @@ function AgentProfile({ agent }: { agent: string }) {
           <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 p-3.5 text-[13px]">
             <dt className="text-muted-foreground">Kind</dt><dd className="m-0">{a.kind === 'connected' ? 'Connected: runs and replays in the app' : 'Imported: traces only'}</dd>
             {a.llm && <><dt className="text-muted-foreground">LLM</dt><dd className="m-0 font-mono text-xs break-words">{a.llm}</dd></>}
-            <dt className="text-muted-foreground">Runs</dt><dd className="m-0 font-mono">{a.n_runs}</dd>
+            <dt className="text-muted-foreground">Runs</dt><dd className="m-0"><span className="font-mono">{a.n_runs}</span> <span className="text-xs text-muted-foreground">({a.n_dataset_runs} dataset · {a.n_runs - a.n_dataset_runs} from the app)</span></dd>
             <dt className="text-muted-foreground">Templates</dt><dd className="m-0 font-mono">{a.templates.train.length} train · {a.templates.test.length} test</dd>
           </dl>
         </Panel>
         <Panel title="Diagnosis model" sub={<Link to={`/${agent}/training`} className="font-medium text-recorder-ink">Train →</Link>}>
           {a.model ? (
             <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 p-3.5 text-[13px]">
-              <dt className="text-muted-foreground">Trained on</dt><dd className="m-0 font-mono">{a.model.n_train_runs} runs ({a.model.n_train_cases} failures)</dd>
+              <dt className="text-muted-foreground">Trained on</dt><dd className="m-0"><span className="font-mono">{a.model.n_train_runs}</span> <span className="text-xs text-muted-foreground">training runs ({a.model.n_train_runs - a.model.n_train_cases} clean successes · {a.model.n_train_cases} failures with a known culprit)</span></dd>
               <dt className="text-muted-foreground">Features</dt><dd className="m-0 font-mono">{a.model.features.length}</dd>
               <dt className="text-muted-foreground">Seen faults</dt><dd className="m-0 font-mono text-xs break-words">{a.model.seen_fault_types.join(', ') || '—'}</dd>
             </dl>

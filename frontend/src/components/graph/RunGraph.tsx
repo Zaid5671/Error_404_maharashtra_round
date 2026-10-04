@@ -52,8 +52,8 @@ function shortcutEdges(steps: Step[]): Set<string> {
   return out
 }
 
-function Graph(props: RunGraphProps & { layout: GraphLayout }) {
-  const { steps, label, selectedId, onSelect, runningId, final, scores, culpritId, impactPath, cachedIds, editedId, changedIds, tags, layout } = props
+function Graph(props: RunGraphProps & { layout: GraphLayout; boxHeight: number }) {
+  const { steps, label, selectedId, onSelect, runningId, final, scores, culpritId, impactPath, cachedIds, editedId, changedIds, tags, layout, boxHeight } = props
   const { fitView } = useReactFlow()
 
   const nodes = useMemo<Node[]>(() => {
@@ -120,15 +120,17 @@ function Graph(props: RunGraphProps & { layout: GraphLayout }) {
     [steps, layout, selectedId, impactPath, shortcuts],
   )
 
+  // Refit after React Flow has measured its new size (its own ResizeObserver runs first).
   useEffect(() => {
-    const t = setTimeout(() => fitView({ padding: 0.04, maxZoom: 1, duration: 250 }), 30)
+    const t = setTimeout(() => fitView({ padding: 0.04, maxZoom: 1, duration: 250 }), 60)
     return () => clearTimeout(t)
-  }, [steps.length, fitView])
+  }, [steps.length, boxHeight, fitView])
 
   useEffect(() => {
-    const refit = () => fitView({ padding: 0.04, maxZoom: 1 })
+    let t: ReturnType<typeof setTimeout>
+    const refit = () => { clearTimeout(t); t = setTimeout(() => fitView({ padding: 0.04, maxZoom: 1 }), 60) }
     window.addEventListener('resize', refit)
-    return () => window.removeEventListener('resize', refit)
+    return () => { clearTimeout(t); window.removeEventListener('resize', refit) }
   }, [fitView])
 
   return (
@@ -163,14 +165,17 @@ export function RunGraph(props: RunGraphProps) {
     return () => ro.disconnect()
   }, [])
   // Tall enough to show the whole run at the zoom that fits the panel's width (no empty bands on
-  // narrow screens); very long runs cap out and zoom out further (or pan / zoom by hand).
+  // narrow screens); very long runs cap out and zoom out further (or pan / zoom by hand). The graph
+  // is drawn only once the width is known, so its first fit already has the final height.
   const scale = width ? Math.min(1, (width - 16) / layout.width) : 1
   const height = props.height ?? Math.min(Math.max(layout.height * scale + 24, 220), 1000)
   return (
     <div ref={box} style={{ height }} className="w-full">
-      <ReactFlowProvider>
-        <Graph {...props} layout={layout} />
-      </ReactFlowProvider>
+      {width > 0 && (
+        <ReactFlowProvider>
+          <Graph {...props} layout={layout} boxHeight={height} />
+        </ReactFlowProvider>
+      )}
     </div>
   )
 }

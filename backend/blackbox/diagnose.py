@@ -45,8 +45,11 @@ def impact_path(steps: list[dict], culprit: int) -> list[int]:
 
 def _label(feature: str, row: dict, notes: list[tuple[str, str]], n_down: int) -> str:
     facts = [text for f, text in notes if f == feature]
-    if facts:
-        return facts[0]
+    if feature == "anomalous" and notes:  # say what looked abnormal, not just that something did
+        facts = [notes[0][1]]
+    if facts:  # capitalise a plain first word, never a field name like delivery_fee or prices.S
+        first = facts[0].split(' ', 1)[0]
+        return facts[0][0].upper() + facts[0][1:] if first.isalpha() and first.islower() else facts[0]
     if feature == "downstream_anomalies":
         return f"{int(row[feature])} later steps that depend on it also look abnormal"
     if feature == "n_downstream":
@@ -86,10 +89,14 @@ def diagnose_with(model: xgb.Booster, norms: dict, run: dict) -> Diagnosis:
     culprit = steps[top]
     contribs = model.predict(X, pred_contribs=True)[top][:-1]  # last column is the bias
     n_down = len(descendants(steps)[culprit["id"]])
-    reasons = [
-        Reason(feature=f, label=_label(f, rows[top], notes[top], n_down), shap=round(float(c), 4))
-        for c, f in sorted(zip(contribs, FEATURES), reverse=True)[:N_REASONS] if c > 0
-    ]
+    reasons: list[Reason] = []
+    for c, f in sorted(zip(contribs, FEATURES), reverse=True)[:N_REASONS]:
+        if c <= 0:
+            continue
+        label = _label(f, rows[top], notes[top], n_down)
+        if any(r.label == label for r in reasons):  # the same fact behind two features: say it once
+            label = LABELS[f]
+        reasons.append(Reason(feature=f, label=label, shap=round(float(c), 4)))
     path = impact_path(steps, culprit["id"])
     fact = next((text for _, text in notes[top]), None)
     explanation = f"{_name(culprit).capitalize()} most likely caused the failure"

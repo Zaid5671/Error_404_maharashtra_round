@@ -63,26 +63,26 @@ export function Overview() {
                 note={o.top1 == null ? 'No model trained yet' : `Culprit ranked #1 on test runs · unseen faults ${pct(o.unseen_top1 ?? 0)}`}>
                 {o.top1 != null && <Split parts={[[o.top1, 'bg-foreground', 'found'], [1 - o.top1, 'bg-border', 'missed']]} />}
               </Stat>
-              <Stat label="Replay success" value={o.replay_success == null ? '—' : pct(o.replay_success)} tone="good"
-                note={o.replays ? `${o.replays_fixed} of ${o.replays} replays turned ✗ into ✓` : 'No fixes replayed yet'}>
+              <Stat label="Replay success" value={o.replays ? `${o.replays_fixed} / ${o.replays}` : '—'} tone="good"
+                note={o.replays ? `replays turned ✗ into ✓ (${pct(o.replay_success ?? 0)})` : 'No fixes replayed yet'}>
                 {o.replays > 0 && <Split parts={[[o.replays_fixed, 'bg-good', 'fixed'], [o.replays - o.replays_fixed, 'bg-bad/60', 'still wrong']]} />}
               </Stat>
             </div>
 
             <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
               <Panel title="Recent runs" sub={<Link to={`/${agent}/runs`} className="font-medium text-recorder-ink">View all →</Link>}>
-                <RunsTable agent={agent} rows={recent.items}
+                <RunsTable agent={agent} rows={recent.items} compact
                   empty={canRun ? 'No runs yet. Press New Run to start one.' : 'No runs yet. Import traces in Training.'} />
               </Panel>
               <div className="grid gap-4">
                 {o.demo_runs.length > 0 && (
-                  <Panel title="Demo runs" sub="prepared failures">
+                  <Panel title="Demo runs" sub="prepared failures · fault hidden until Reveal">
                     <ul className="m-0 grid list-none gap-1.5 p-3.5">
-                      {o.demo_runs.map((d) => (
+                      {o.demo_runs.map((d, i) => (
                         <li key={d.run_id}>
                           <Link to={`/${agent}/runs/${d.run_id}/diagnosis`} className="grid gap-0.5 rounded-md border bg-sunk px-2.5 py-2 hover:border-recorder">
                             <span className="flex items-center justify-between gap-2">
-                              <span className="font-mono text-xs font-medium">{d.fault_type}</span><SeenBadge seen={d.seen} />
+                              <span className="text-xs font-semibold">Demo run {i + 1}</span><SeenBadge seen={d.seen} />
                             </span>
                             <span className="truncate text-xs text-muted-foreground">{d.request_text}</span>
                           </Link>

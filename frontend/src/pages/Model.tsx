@@ -45,12 +45,18 @@ function TrainingData({ agent }: { agent: string }) {
   if (data.loading) return <Loading what="the training data" />
   if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} />
   const d = data.data
+  const used = (split: 'train' | 'test') => d.kinds.reduce((n, k) => n + (k.kind === 'clean' ? k[`${split}_success`] : 0) + (k.kind === 'clean' ? 0 : k[`${split}_failure`]), 0)
+  const failed = d.kinds.reduce((n, k) => n + (k.kind === 'clean' ? 0 : k.test_failure), 0)
   const th = 'border-b px-3 py-2 text-right font-mono text-[10.5px] font-semibold tracking-wider whitespace-nowrap text-muted-foreground uppercase first:text-left'
   const td = 'border-b px-3 py-1.5 text-right font-mono tabular-nums first:text-left'
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {([['Runs', d.total, 'generated or imported, never live runs'], ['Training split', d.train, `${d.templates.train.length} task templates`], ['Test split', d.test, `${d.templates.test.length} templates the model never saw`]] as const).map(([k, v, note]) => (
+        {([
+          ['Dataset runs', d.total, 'generated or imported; runs made in the app are never used'],
+          ['Training split', d.train, `${d.templates.train.length} templates · ${used('train')} used: clean successes and failures with a known culprit`],
+          ['Test split', d.test, `${d.templates.test.length} templates the model never saw · ${failed} failures scored`],
+        ] as const).map(([k, v, note]) => (
           <Panel key={k} className="grid gap-1 p-4">
             <span className="bb-label">{k}</span>
             <span className="bb-gauge text-[40px] leading-none font-bold">{v}</span>
@@ -100,11 +106,12 @@ function Faults({ agent }: { agent: string }) {
   const { canRun } = useAgent()
   const navigate = useNavigate()
   const setFault = useSession((s) => s.setFault)
-  const data = useApi(() => Promise.all([api.faults(agent), api.report(agent).catch(() => null)]), [agent])
+  const data = useApi(() => Promise.all([api.faults(agent), api.report(agent).catch(() => null), api.dataset(agent).catch(() => null)]), [agent])
   if (data.loading) return <Loading what="the faults" />
   if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} />
-  const [faults, report] = data.data
+  const [faults, report, dataset] = data.data
   const acc = Object.fromEntries((report?.by_type ?? []).map((t) => [t.type, t]))
+  const kinds = Object.fromEntries((dataset?.kinds ?? []).map((k) => [k.kind, k]))
   return (
     <Panel title="Fault catalogue" sub="from the agent; accuracy from the test runs">
       <div className="grid gap-2 p-3.5">
@@ -119,7 +126,7 @@ function Faults({ agent }: { agent: string }) {
               </div>
               <div className="text-xs">
                 {a ? <>Culprit found first in <strong className="font-mono">{pct(a.top1)}</strong> of {a.n} test runs · top 3 <span className="font-mono">{pct(a.top3)}</span></>
-                  : <span className="text-muted-foreground">Not in the test set</span>}
+                  : <span className="text-muted-foreground">{notScored(kinds[f.type])}</span>}
               </div>
               {canRun && f.live ? (
                 <button type="button" onClick={() => { setFault('choose', f.type); navigate(`/${agent}/new`) }}
@@ -134,4 +141,12 @@ function Faults({ agent }: { agent: string }) {
       </div>
     </Panel>
   )
+}
+
+/** Why a fault type has no accuracy, from the runs that have it. */
+function notScored(k?: { train_success: number; train_failure: number; test_success: number; test_failure: number }) {
+  const n = k ? k.train_success + k.train_failure + k.test_success + k.test_failure : 0
+  if (!k || n === 0) return 'Not scored: the dataset has no runs with this fault'
+  if (k.test_success + k.test_failure === 0) return `Not scored: its ${n} runs are all training runs`
+  return `Not scored: the agent still got all ${k.test_success} test runs with it right, so there was no failure to find`
 }

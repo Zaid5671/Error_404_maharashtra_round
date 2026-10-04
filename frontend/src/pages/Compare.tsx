@@ -66,6 +66,15 @@ export function Compare() {
   }
 
   const rows = pairs.filter((p) => p.kind !== 'same')
+  const editRows = rows.filter((p) => edited != null && p.b?.id === edited)
+  const changedRows = rows.filter((p) => !editRows.includes(p) && (p.kind === 'changed' || p.kind === 'moved'))
+  const onlyRows = rows.filter((p) => p.kind === 'onlyA' || p.kind === 'onlyB')
+  const sections: [string, Pair[]][] = ([
+    ['Your edit', editRows],
+    [isReplay ? 'Knock-on changes' : 'Changed steps', changedRows],
+    ['Steps in only one run', onlyRows],
+  ] as [string, Pair[]][]).filter(([, ps]) => ps.length > 0)
+  const idFields = [...new Set(pairs.flatMap((p) => p.changes.filter((c) => c.id).map((c) => c.field.split('.').pop()!.replace(/\[\d+\]$/, ''))))]
   const summary = [
     `${count('same')} identical`, count('changed') && `${count('changed')} changed`, count('moved') && `${count('moved')} moved`,
     onlyA.length && `${onlyA.length} only in the original`, onlyB.length && `${onlyB.length} only in the ${bName}`,
@@ -91,22 +100,37 @@ export function Compare() {
                   ))}
                 </tr>
               </thead>
-              <tbody>{rows.flatMap((p, i) => rowsFor(p, i, edited, plugin.stepLabel))}</tbody>
+              {sections.map(([title, ps]) => (
+                <tbody key={title}>
+                  <tr>
+                    <td colSpan={4} className="border-b bg-sunk px-3 py-1.5">
+                      <span className="bb-label">{title}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{ps.length} step{ps.length > 1 ? 's' : ''}</span>
+                    </td>
+                  </tr>
+                  {ps.flatMap((p, i) => rowsFor(p, `${title}-${i}`, edited, plugin.stepLabel))}
+                </tbody>
+              ))}
             </table>
           </div>
+        )}
+        {idFields.length > 0 && (
+          <p className="m-0 px-3.5 py-2 text-xs text-muted-foreground">
+            Not shown: <span className="font-mono">{idFields.join(', ')}</span>. IDs are new on every run, so a different value isn’t a real change.
+          </p>
         )}
       </Panel>
     </div>
   )
 }
 
-function rowsFor(p: Pair, i: number, edited: number | null, label: (s: Step) => string) {
+function rowsFor(p: Pair, key: string, edited: number | null, label: (s: Step) => string) {
   const td = 'border-b px-3 py-1.5 align-top'
   const isEdit = p.b?.id === edited
   const where = p.a && p.b ? (p.a.id === p.b.id ? stepName(p.a) : `#${p.a.id} ↔ #${p.b.id} ${p.a.name}`) : stepName((p.a ?? p.b)!)
   if (p.kind === 'onlyA' || p.kind === 'onlyB') {
     return [(
-      <tr key={i} className="bg-bad-soft/40">
+      <tr key={key} className="bg-bad-soft/40">
         <td className={cn(td, 'font-mono whitespace-nowrap')}>{where}</td>
         <td className={cn(td, 'text-xs')}>{p.kind === 'onlyA' ? 'only in the original' : 'only in this run'}</td>
         <td className={cn(td, 'text-xs', p.a && 'text-bad line-through decoration-1')}>{p.a ? label(p.a) : '—'}</td>
@@ -114,9 +138,10 @@ function rowsFor(p: Pair, i: number, edited: number | null, label: (s: Step) => 
       </tr>
     )]
   }
-  const fields = p.changes.length ? p.changes : [{ field: '(called at a different point)', before: '', after: '' }]
+  const real = p.changes.filter((c) => !c.id)
+  const fields = real.length ? real : [{ field: '(called at a different point)', before: '', after: '' }]
   return fields.map((c, j) => (
-    <tr key={`${i}-${j}`} className={cn(isEdit && 'bg-recorder-soft')}>
+    <tr key={`${key}-${j}`} className={cn(isEdit && 'bg-recorder-soft')}>
       <td className={cn(td, 'font-mono whitespace-nowrap')}>{j === 0 ? <>{where}{p.kind === 'moved' && <span className="ml-1.5 font-sans text-xs text-muted-foreground">moved</span>}</> : ''}</td>
       <td className={cn(td, 'font-mono')}>{c.field}{isEdit && j === 0 && <span className="ml-2 font-sans text-xs text-recorder-ink">your edit</span>}</td>
       <td className={cn(td, 'font-mono break-all text-bad line-through decoration-1')}>{c.before}</td>

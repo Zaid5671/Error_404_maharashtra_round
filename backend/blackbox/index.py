@@ -16,6 +16,7 @@ from pathlib import Path
 from blackbox import store
 from blackbox.config import REPORTS_DIR
 from blackbox.diagnose import diagnose, load_model
+from blackbox.features import LABELS
 from blackbox.split import split_of
 
 _summaries: dict[Path, tuple[float, dict]] = {}
@@ -63,6 +64,12 @@ def summaries(agent: str) -> list[dict]:
     return [summary(agent, p) for p in store.list_runs(agent)]
 
 
+def _brief_reason(reasons: list) -> str | None:
+    """The strongest reason that states a fact from the run, else the strongest reason."""
+    facts = [r.label for r in reasons if r.label != LABELS.get(r.feature)]
+    return facts[0] if facts else reasons[0].label if reasons else None
+
+
 def suspect(agent: str, row: dict) -> dict | None:
     """The diagnosis of a failed run in brief: suspected step, its score and the top reason."""
     if row["outcome"] != "failure":
@@ -75,7 +82,7 @@ def suspect(agent: str, row: dict) -> dict | None:
             d = diagnose(agent, run)
             step = next(s for s in run["steps"] if s["id"] == d.culprit)
             _suspects[key] = {"step_id": d.culprit, "name": step["name"], "score": d.scores[str(d.culprit)],
-                              "reason": d.reasons[0].label if d.reasons else None}
+                              "reason": _brief_reason(d.reasons)}
         except (FileNotFoundError, StopIteration):
             _suspects[key] = None
     return _suspects[key]

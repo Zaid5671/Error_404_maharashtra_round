@@ -200,12 +200,26 @@ def _fmt(v: str) -> str:
 
 
 def _ctx_text(ctx_key: str) -> str:
-    seen, pairs = set(), []
-    for p, v in json.loads(ctx_key):  # one mention per value: query=x and id=x say the same thing
-        if v not in seen:
-            seen.add(v)
-            pairs.append(f"{p.split('.')[-1]}={v}")
-    return ", ".join(pairs[:3]) or "no inputs"
+    """The input values a norm is conditioned on, once each: query=x and name=X say the same thing."""
+    seen, out = set(), []
+    for p, v in json.loads(ctx_key):
+        word = (_field(p) if v else f"not {_field(p)}") if isinstance(v, bool) else str(v)
+        norm = word.lower().replace("_", " ")  # veg_supreme and Veg Supreme are one value
+        if norm not in seen:
+            seen.add(norm)
+            out.append(word)
+    return ", ".join(out[:3]) or "any input"
+
+
+def _field(path: str) -> str:
+    """A readable field name: the last part of the path, with its parent when the last part is short
+    ("results[].prices.S" -> "prices.S")."""
+    parts = [x.removesuffix("[]") for x in path.split(".") if x]
+    return ".".join(parts[-2:]) if len(parts) > 1 and len(parts[-1]) <= 2 else parts[-1] if parts else path
+
+
+def _vals(vals: set[str]) -> str:
+    return " / ".join(sorted(_fmt(x) for x in vals)) or "missing"
 
 
 def check_step(v: StepView, norms: dict, words: set[str], sources: list[dict]) -> tuple[dict, list[tuple[str, str]]]:
@@ -227,7 +241,7 @@ def check_step(v: StepView, norms: dict, words: set[str], sources: list[dict]) -
         mode, n_mode = max(seen.items(), key=lambda kv: kv[1])
         if _key(val) not in seen and total >= MIN_SEEN and n_mode / total >= 0.9:
             surprise += 1
-            evidence.append(("surprise", f"{p.split('.')[-1]} = {val}, but with {_ctx_text(c)} it was always {_fmt(mode)}"))
+            evidence.append(("surprise", f"{_field(p)} is {_fmt(_key(val))}; successful runs with the same input ({_ctx_text(c)}) always had {_fmt(mode)}"))
         if not isinstance(val, (int, float)) or isinstance(val, bool):
             for n, (lo, hi, k) in ranges.get(f"{v.name}|{p}|{c}|{_key(val)}", {}).items():
                 x = v.numbers.get(n)
@@ -236,8 +250,8 @@ def check_step(v: StepView, norms: dict, words: set[str], sources: list[dict]) -
                 gap = (lo - x) / max(abs(lo), 1) if x < lo else (x - hi) / max(abs(hi), 1) if x > hi else 0.0
                 if gap > violation:
                     violation = gap
-                    side = f"below the lowest seen ({lo:g})" if x < lo else f"above the highest seen ({hi:g})"
-                    range_note = f"{p.split('.')[-1]} = {val} with {n.split('.', 1)[1]} {x:g}, {side}"
+                    side = f"lower than in any successful run with it ({lo:g})" if x < lo else f"higher than in any successful run with it ({hi:g})"
+                    range_note = f"{_field(p)} {_fmt(_key(val))} came with {_field(n.split('.', 1)[1])} {x:g}, {side}"
     if range_note:
         evidence.append(("range_violation", range_note))
 
@@ -255,8 +269,8 @@ def check_step(v: StepView, norms: dict, words: set[str], sources: list[dict]) -
                 agree = agree or ok
         if best and not agree:
             links += 1
-            evidence.append(("link_mismatch", "output " + ", ".join(f"{k}={rec[k]}" for k in list(rec)[:3])
-                             + " doesn't match its input or the steps it used"))
+            evidence.append(("link_mismatch", "its output (" + ", ".join(f"{k} {rec[k]}" for k in list(rec)[:3])
+                             + ") doesn't match its input or the steps it used"))
 
     request = 0
     for p, vals in v.values_by_path.items():
@@ -264,7 +278,7 @@ def check_step(v: StepView, norms: dict, words: set[str], sources: list[dict]) -
             for want in hints.get(f"{v.name}|{p}|{w}", []):
                 if want not in vals:
                     request += 1
-                    evidence.append(("request_mismatch", f"the request says '{w}', but {p.split('.')[-1]} has no {_fmt(want)}"))
+                    evidence.append(("request_mismatch", f"the request says '{w}', but {_field(p)} is {_vals(vals)}, not {_fmt(want)}"))
 
     error = int(v.step.get("error") is not None)
     if error:

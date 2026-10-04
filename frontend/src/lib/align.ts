@@ -4,6 +4,8 @@
 // A weighted longest-common-subsequence pairs steps in order: same tool, input and output scores
 // 3, same tool and input 2, same tool 1. Steps left over that share a tool name are then paired
 // as "moved" (the agent called them in a different order). Whatever remains exists in one run only.
+// Fields named like IDs (order_id, runId) get a new value on every run, so a pair that differs only
+// there still counts as the same step.
 
 import type { Step } from '@/types/contract'
 
@@ -11,6 +13,8 @@ export interface FieldChange {
   field: string
   before: string
   after: string
+  /** an ID-like field: expected to differ between any two runs */
+  id: boolean
 }
 
 export type PairKind = 'same' | 'changed' | 'moved' | 'onlyA' | 'onlyB'
@@ -30,6 +34,9 @@ export function flatten(value: unknown, path = '', out: Record<string, unknown> 
   return out
 }
 
+/** order_id, cart[0].runId: yes. A bare "id" (e.g. a menu item's id) is real data: no. */
+export const isIdField = (field: string) => /(_id|[a-z]Id)$/.test(field.split('.').pop()!.replace(/\[\d+\]$/, ''))
+
 const show = (v: unknown) => (v === undefined ? '—' : JSON.stringify(v))
 const same = (x: unknown, y: unknown) => JSON.stringify(x) === JSON.stringify(y)
 
@@ -38,7 +45,7 @@ export function fieldChanges(a: Step, b: Step): FieldChange[] {
   for (const part of ['input', 'output'] as const) {
     const fa = flatten(a[part]), fb = flatten(b[part])
     for (const key of new Set([...Object.keys(fa), ...Object.keys(fb)])) {
-      if (!same(fa[key], fb[key])) out.push({ field: `${part === 'input' ? 'in.' : ''}${key}`, before: show(fa[key]), after: show(fb[key]) })
+      if (!same(fa[key], fb[key])) out.push({ field: `${part === 'input' ? 'in.' : ''}${key}`, before: show(fa[key]), after: show(fb[key]), id: isIdField(key) })
     }
   }
   return out
@@ -65,7 +72,7 @@ export function alignRuns(as: Step[], bs: Step[]): Pair[] {
     const s = i < n && j < m ? score(as[i], bs[j]) : 0
     if (s && dp[i][j] === s + dp[i + 1][j + 1]) {
       const changes = fieldChanges(as[i], bs[j])
-      pairs.push({ a: as[i], b: bs[j], kind: changes.length ? 'changed' : 'same', changes })
+      pairs.push({ a: as[i], b: bs[j], kind: changes.some((c) => !c.id) ? 'changed' : 'same', changes })
       i++; j++
     } else if (j >= m || (i < n && dp[i + 1][j] >= dp[i][j + 1])) {
       pairs.push({ a: as[i++], b: null, kind: 'onlyA', changes: [] })
