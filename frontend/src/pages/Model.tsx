@@ -2,6 +2,7 @@
 // data), and how it does on each fault type, with a shortcut to run one (Faults).
 
 import { NavLink, useNavigate } from 'react-router'
+import { getPlugin } from '@/agents/registry'
 import { api } from '@/api/client'
 import { useApi } from '@/api/useApi'
 import { SeenBadge } from '@/components/FaultPicker'
@@ -109,7 +110,8 @@ function Faults({ agent }: { agent: string }) {
   const data = useApi(() => Promise.all([api.faults(agent), api.report(agent).catch(() => null), api.dataset(agent).catch(() => null)]), [agent])
   if (data.loading) return <Loading what="the faults" />
   if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} />
-  const [faults, report, dataset] = data.data
+  const [allFaults, report, dataset] = data.data
+  const faults = allFaults.filter((f) => !getPlugin(agent).hiddenFaults.includes(f.type))
   const acc = Object.fromEntries((report?.by_type ?? []).map((t) => [t.type, t]))
   const kinds = Object.fromEntries((dataset?.kinds ?? []).map((k) => [k.kind, k]))
   return (

@@ -19,4 +19,5 @@ export const pizzaPlugin: AgentPlugin = {
   TaskSummary: OrderSummary,
   stepLabel: pizzaStepLabel,
   resultLine: pizzaResultLine,
+  hiddenFaults: ['stock_lie'],
 }

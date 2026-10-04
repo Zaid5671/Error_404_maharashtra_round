@@ -30,6 +30,9 @@ export interface AgentPlugin {
   stepLabel?: (step: Step) => string | null
   /** The banner sentence for a finished run. */
   resultLine?: (result: ResultInfo) => ReactNode
+  /** Fault types left out of the fault lists (picker, Faults tab, accuracy by type). Display only:
+   *  the overall accuracy numbers still count their runs. */
+  hiddenFaults?: string[]
 }
 
 /** A plugin with every optional part filled in (by the registry). */

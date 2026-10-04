@@ -2,6 +2,7 @@
 // (GET /faults/{agent}). Tool faults can be hidden in a live run; LLM faults need a re-run from
 // step 1, so they are listed but disabled. The model is never told what was picked.
 
+import { getPlugin } from '@/agents/registry'
 import { api } from '@/api/client'
 import { useApi } from '@/api/useApi'
 import { cn } from '@/lib/utils'
@@ -18,7 +19,8 @@ const HINT: Record<FaultMode, string> = {
 export function FaultPicker({ agent }: { agent: string }) {
   const { faultMode, faultType, setFault } = useSession()
   const faults = useApi(() => api.faults(agent), [agent])
-  const list = faults.data ?? []
+  const hidden = getPlugin(agent).hiddenFaults
+  const list = (faults.data ?? []).filter((f) => !hidden.includes(f.type))
   const live = list.filter((f) => f.live)
   const other = list.filter((f) => !f.live)
 

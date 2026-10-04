@@ -2,6 +2,7 @@
 // split into fault types it trained on (seen) and types it never saw (unseen).
 
 import { useParams } from 'react-router'
+import { getPlugin } from '@/agents/registry'
 import { api } from '@/api/client'
 import { useApi } from '@/api/useApi'
 import { SeenBadge } from '@/components/FaultPicker'
@@ -17,7 +18,9 @@ export function Report() {
   if (data.loading) return <Loading what="the report" />
   if (data.error || !data.data) return <Problem message={data.error ?? 'No report'} back={{ to: `/${agent}/training`, label: 'Train a model' }} />
   const r = data.data
-  const blind = r.by_type.filter((t) => t.top3 === 0)
+  const hidden = getPlugin(agent).hiddenFaults
+  const byType = r.by_type.filter((t) => !hidden.includes(t.type))
+  const blind = byType.filter((t) => t.top3 === 0)
 
   return (
     <div className="grid gap-4">
@@ -34,7 +37,7 @@ export function Report() {
         </Panel>
         <Panel title="By fault type" sub="top-1 · top-3 · runs">
           <div className="grid gap-2 p-3.5">
-            {r.by_type.map((t) => (
+            {byType.map((t) => (
               <div key={t.type} className="grid grid-cols-[minmax(0,1fr)_52px_40px] items-center gap-x-2.5 gap-y-1 text-[12.5px] sm:grid-cols-[minmax(150px,210px)_minmax(0,1fr)_52px_40px]">
                 <span className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono">{t.type}<SeenBadge seen={t.seen} /></span>
                 <span className="relative h-2.5 overflow-hidden rounded-full bg-sunk max-sm:col-span-3 max-sm:row-start-2" role="img"

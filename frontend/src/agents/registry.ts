@@ -19,6 +19,7 @@ export function getPlugin(name: string): ResolvedPlugin {
     ...plugin,
     TaskSummary: plugin.TaskSummary ?? GenericTaskSummary,
     resultLine: plugin.resultLine ?? genericResultLine,
+    hiddenFaults: plugin.hiddenFaults ?? [],
     stepLabel: (step) => (step.error ? `error: ${step.error}` : (plugin.stepLabel?.(step) ?? genericStepLabel(step))),
   }
 }
