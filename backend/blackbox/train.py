@@ -35,13 +35,19 @@ PARAMS = {"objective": "binary:logistic", "max_depth": 4, "eta": 0.1, "subsample
           "min_child_weight": 2, "eval_metric": "logloss", "seed": 0,
           "monotone_constraints": "(" + ",".join(str(MONOTONE.get(f, 0)) for f in FEATURES) + ")"}
 ROUNDS = 200
+TRAINING_SOURCES = ("generated", "imported")  # never live runs or replays
+MIN_CLEAN, MIN_CASES = 10, 10  # successful runs to learn "normal" from; failures with a known culprit
+
+
+class NotEnoughData(ValueError):
+    pass
 
 
 def load_runs(agent: str) -> list[dict]:
     """The generator's runs only. Live runs and replays live in the same folder, and a replay of a
     training run even keeps its split, so they must never reach training or evaluation."""
     runs = (json.loads(p.read_text(encoding="utf-8")) for p in list_runs(agent))
-    return [r for r in runs if r["source"] == "generated"]
+    return [r for r in runs if r["source"] in TRAINING_SOURCES]
 
 
 def is_case(run: dict) -> bool:
@@ -107,18 +113,19 @@ def cross_validate(train: list[dict]) -> None:
               f"top3={np.mean([k <= 3 for k in ranks]):.2f}")
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("agent")
-    ap.add_argument("--cv", action="store_true", help="leave-one-fault-type-out check on training runs")
-    args = ap.parse_args()
-
-    train = usable([r for r in load_runs(args.agent) if r.get("split") == "train"])
-    if args.cv:
-        cross_validate(train)
-        return
-    model = fit(out_of_fold(train))
-    out = MODELS_DIR / args.agent
+def train_agent(agent: str, log=print) -> dict:
+    """Train and save the agent's model from its training-split runs. Returns the model's meta."""
+    train = usable([r for r in load_runs(agent) if r.get("split") == "train"])
+    clean, cases = sum(map(is_clean, train)), sum(map(is_case, train))
+    log(f"training runs: {len(train)} ({clean} successful, {cases} failures with a known culprit)")
+    if clean < MIN_CLEAN or cases < MIN_CASES:
+        raise NotEnoughData(f"need at least {MIN_CLEAN} successful runs and {MIN_CASES} labelled failures in the "
+                            f"training split; have {clean} and {cases}")
+    log("learning what normal looks like and building step features (out of fold, per template)")
+    featured = out_of_fold(train)
+    log(f"fitting XGBoost on {sum(len(rows) for _, rows in featured)} steps")
+    model = fit(featured)
+    out = MODELS_DIR / agent
     out.mkdir(parents=True, exist_ok=True)
     model.save_model(out / "model.json")
     (out / "feature_stats.json").write_text(json.dumps(fit_norms(train)), encoding="utf-8")
@@ -126,7 +133,19 @@ def main() -> None:
     meta = {"features": FEATURES, "seen_fault_types": seen, "n_train_runs": len(train),
             "n_train_cases": sum(map(is_case, train))}
     (out / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    print(f"trained {args.agent}: {meta['n_train_runs']} runs ({meta['n_train_cases']} failures), seen faults {seen}")
+    log(f"trained {agent}: {meta['n_train_runs']} runs ({meta['n_train_cases']} failures), seen faults {seen}")
+    return meta
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("agent")
+    ap.add_argument("--cv", action="store_true", help="leave-one-fault-type-out check on training runs")
+    args = ap.parse_args()
+    if args.cv:
+        cross_validate(usable([r for r in load_runs(args.agent) if r.get("split") == "train"]))
+        return
+    train_agent(args.agent)
 
 
 if __name__ == "__main__":

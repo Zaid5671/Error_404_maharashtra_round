@@ -40,7 +40,8 @@ def live_run(client, fake_llm, fault_mode="none", fault_type=None) -> tuple[list
 
 
 def test_agents_catalog_and_report(client):
-    assert client.get("/agents").json() == {"agents": ["pizza"]}
+    agents = client.get("/agents").json()
+    assert agents["agents"] == ["pizza"] and agents["items"][0]["kind"] == "connected"
     catalog = client.get("/catalog/pizza").json()
     assert {p["id"] for p in catalog["pizzas"]} >= {"margherita", "pepperoni"}
     Report.model_validate(client.get("/report/pizza").json())

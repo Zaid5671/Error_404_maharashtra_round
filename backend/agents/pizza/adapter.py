@@ -42,6 +42,19 @@ class PizzaAdapter:
             "expected": solver.solve(order)["expected"],
         }
 
+    def describe(self) -> dict:
+        """Optional hook: what the Agents page shows about this agent."""
+        from agents import config
+        from agents.pizza import tools
+
+        return {
+            "title": "Pizza ordering agent",
+            "description": "Takes a customer's order in plain words, checks the menu, stock, coupons and delivery "
+                           "area with tools, and places the order.",
+            "llm": f"{config.PROVIDER} · {config.LLM_MODEL} · reasoning {config.REASONING_EFFORT}",
+            "tools": {t.name: t.description for t in tools.TOOLS.values()},
+        }
+
     def form_data(self) -> dict:
         return Catalog(
             pizzas=[{"id": p["id"], "name": p["name"], "prices": p["prices"]} for p in shop.MENU.values()],

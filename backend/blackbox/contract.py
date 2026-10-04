@@ -55,7 +55,7 @@ class Run(Model):
     run_id: str
     agent: str  # which agent produced this run, e.g. "pizza"
     template_id: str
-    source: Literal["generated", "live", "replay"]
+    source: Literal["generated", "live", "replay", "imported"]
     parent_run_id: str | None
     replayed_from_step: int | None
     task: dict[str, Any]  # the agent's structured input
