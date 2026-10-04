@@ -14,6 +14,7 @@ import { RunGraph } from '@/components/graph/RunGraph'
 import { StepDetails } from '@/components/panels/StepDetails'
 import { pct } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useAgent } from '@/layout/agentContext'
 import type { Diagnosis as DiagnosisT, Run } from '@/types/contract'
 
 
@@ -24,7 +25,7 @@ export function Diagnosis() {
   const [selected, setSelected] = useState<number | null>(null)
 
   if (data.loading) return <Loading what="the diagnosis" />
-  if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}`, label: 'Start a new run' }} />
+  if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}/runs`, label: 'Back to runs' }} />
   const [run, diag] = data.data
   const failed = run.outcome === 'failure'
   const step = run.steps.find((s) => s.id === selected) ?? null
@@ -63,7 +64,7 @@ export function Diagnosis() {
             <Panel title="Diagnosis">
               <div className="grid gap-3 p-3.5">
                 <p className="m-0 text-[13.5px]">The Black Box investigates failed runs. Every step of this one scored below 1% suspicion.</p>
-                <Link to={`/${agent}`} className="w-fit rounded-md bg-recorder px-3.5 py-2 font-semibold text-white">Run another order</Link>
+                <Link to={`/${agent}/runs`} className="w-fit rounded-md bg-recorder px-3.5 py-2 font-semibold text-white">Back to runs</Link>
               </div>
             </Panel>
           )}
@@ -81,6 +82,7 @@ export function Diagnosis() {
 
 function Finding({ agent, run, diag }: { agent: string; run: Run; diag: DiagnosisT }) {
   const [revealed, setRevealed] = useState(false)
+  const { canRun } = useAgent()
   const name = Object.fromEntries(run.steps.map((s) => [s.id, s.name]))
   const culprit = diag.culprit!
   const max = Math.max(...diag.reasons.map((r) => r.shap), 1e-9)
@@ -149,9 +151,11 @@ function Finding({ agent, run, diag }: { agent: string; run: Run; diag: Diagnosi
             <span className="block text-xs font-normal text-muted-foreground">Check the model’s answer against the fault that was planted.</span>
           </button>
         )}
-        <Link to={`/${agent}/runs/${run.run_id}/replay`} className="w-fit rounded-md bg-recorder px-3.5 py-2 font-semibold text-white">
-          Fix it in Replay →
-        </Link>
+        {canRun ? (
+          <Link to={`/${agent}/runs/${run.run_id}/replay`} className="w-fit rounded-md bg-recorder px-3.5 py-2 font-semibold text-white">
+            Fix it in Replay →
+          </Link>
+        ) : <p className="m-0 text-xs text-muted-foreground">Replay isn’t available: this imported agent runs outside the app.</p>}
       </div>
     </Panel>
   )

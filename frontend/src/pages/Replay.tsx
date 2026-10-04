@@ -14,6 +14,7 @@ import { Loading, Problem } from '@/components/StateBox'
 import { RunGraph } from '@/components/graph/RunGraph'
 import type { Tag } from '@/components/graph/StepNode'
 import { cn } from '@/lib/utils'
+import { useAgent } from '@/layout/agentContext'
 import { createRunStore, useSession } from '@/store/runStore'
 import type { Diagnosis, Run, Step } from '@/types/contract'
 import { pct } from '@/lib/format'
@@ -22,9 +23,14 @@ type Json = Record<string, unknown>
 
 export function Replay() {
   const { agent = 'pizza', runId = '' } = useParams()
+  const { canRun } = useAgent()
   const data = useApi(() => Promise.all([api.run(agent, runId), api.diagnose(agent, runId)]), [agent, runId])
+  if (!canRun) {
+    return <Problem message={`“${agent}” is an imported agent: replaying needs the agent itself, which runs outside the app. Its diagnosis still works.`}
+      back={{ to: `/${agent}/runs/${runId}/diagnosis`, label: 'Back to the diagnosis' }} />
+  }
   if (data.loading) return <Loading what="the run" />
-  if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}`, label: 'Start a new run' }} />
+  if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}/runs`, label: 'Back to runs' }} />
   return <ReplayScreen agent={agent} run={data.data[0]} diag={data.data[1]} key={runId} />
 }
 

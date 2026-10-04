@@ -15,7 +15,7 @@ export function Report() {
   const { agent = 'pizza' } = useParams()
   const data = useApi(() => api.report(agent), [agent])
   if (data.loading) return <Loading what="the report" />
-  if (data.error || !data.data) return <Problem message={data.error ?? 'No report'} back={{ to: `/${agent}`, label: 'Back to Live Run' }} />
+  if (data.error || !data.data) return <Problem message={data.error ?? 'No report'} back={{ to: `/${agent}/training`, label: 'Train a model' }} />
   const r = data.data
   const blind = r.by_type.filter((t) => t.top3 === 0)
 

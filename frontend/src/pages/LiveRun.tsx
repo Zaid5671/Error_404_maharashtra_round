@@ -17,6 +17,7 @@ import { Problem } from '@/components/StateBox'
 import { RunGraph } from '@/components/graph/RunGraph'
 import { StepDetails } from '@/components/panels/StepDetails'
 import { cn } from '@/lib/utils'
+import { useAgent } from '@/layout/agentContext'
 import { useLiveRun, useSession } from '@/store/runStore'
 
 // One live stream at a time. It lives outside the component, so moving from /:agent to
@@ -32,6 +33,7 @@ export function LiveRun() {
   const formData = useApi(() => api.catalog(agent), [agent])
   const task = session.drafts[agent] ?? plugin.defaultTask
   const [loadError, setLoadError] = useState<string | null>(null)
+  const { canRun } = useAgent()
 
   const showingLive = runId ? live.meta?.run_id === runId : live.status === 'running'
   const running = live.status === 'running'
@@ -64,7 +66,11 @@ export function LiveRun() {
     )
   }
 
-  if (runId && loadError) return <Problem message={loadError} back={{ to: `/${agent}`, label: 'Start a new run' }} />
+  if (runId && loadError) return <Problem message={loadError} back={{ to: `/${agent}/runs`, label: 'Back to runs' }} />
+  if (!runId && !canRun) {
+    return <Problem message={`“${agent}” is an imported agent: it runs outside the app, so it can’t be run here. Import its traces in Training instead.`}
+      back={{ to: `/${agent}/training`, label: 'Go to Training' }} />
+  }
 
   const view = showingLive ? live : null
   const steps = view?.steps ?? []
@@ -103,7 +109,7 @@ export function LiveRun() {
                 {runFault.mode === 'none' ? 'Fault: none' : runFault.mode === 'surprise' ? 'Fault: hidden (surprise)' : `Fault: ${runFault.type}`}
               </span>
             )}
-            <Link to={`/${agent}`} aria-disabled={running}
+            <Link to={`/${agent}/new`} aria-disabled={running}
               className={cn('w-fit rounded-md border bg-sunk px-2.5 py-1.5 text-sm font-medium', running && 'pointer-events-none opacity-50')}>
               New run
             </Link>

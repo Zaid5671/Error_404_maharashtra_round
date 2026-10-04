@@ -62,7 +62,7 @@ export function Compare() {
   const plugin = getPlugin(agent)
   const data = useApi(() => Promise.all([api.run(agent, originalId), api.run(agent, replayId)]), [agent, originalId, replayId])
   if (data.loading) return <Loading what="both runs" />
-  if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}`, label: 'Start a new run' }} />
+  if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}/runs`, label: 'Back to runs' }} />
   const [a, b] = data.data
 
   const changes = diffRuns(a, b)

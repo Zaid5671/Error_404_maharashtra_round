@@ -42,7 +42,7 @@ export interface Run {
   run_id: string
   agent: string
   template_id: string
-  source: 'generated' | 'live' | 'replay'
+  source: 'generated' | 'live' | 'replay' | 'imported'
   parent_run_id: string | null
   replayed_from_step: number | null
   task: Json

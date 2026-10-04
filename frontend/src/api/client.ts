@@ -3,6 +3,7 @@
 
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { Diagnosis, FaultInfo, ReplayRequest, Report, Run, RunEvent, RunRequest } from '@/types/contract'
+import type { AgentDetails, AgentInfo, Dataset, ImportResult, Overview, ReplayRow, RunPage, SourceFilter, TrainJob } from '@/types/dashboard'
 
 const BASE = '/api'
 type Json = Record<string, unknown>
@@ -74,7 +75,19 @@ async function stream(path: string, body: unknown, onEvent: (e: RunEvent) => voi
 const runs = new Map<string, Promise<Run>>()
 
 export const api = {
-  agents: () => request<{ agents: string[] }>('/agents'),
+  agents: () => request<{ agents: string[]; items: AgentInfo[] }>('/agents'),
+  addAgent: (body: { name: string; title: string; description: string }) => request<AgentInfo>('/agents', body),
+  agent: (agent: string) => request<AgentDetails>(`/agent/${agent}`),
+  runs(agent: string, p: { source?: SourceFilter; outcome?: string; q?: string; sort?: 'recent' | 'suspicion'; limit?: number; offset?: number } = {}) {
+    const qs = new URLSearchParams(Object.entries(p).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]))
+    return request<RunPage>(`/runs/${agent}?${qs}`)
+  },
+  overview: (agent: string, scope: 'app' | 'all' = 'app') => request<Overview>(`/overview/${agent}?scope=${scope}`),
+  replays: (agent: string) => request<ReplayRow[]>(`/replays/${agent}`),
+  dataset: (agent: string) => request<Dataset>(`/dataset/${agent}`),
+  importRuns: (agent: string, runs: unknown[], names: string[]) => request<ImportResult>(`/import/${agent}`, { runs, names }),
+  train: (agent: string) => request<TrainJob>(`/train/${agent}`, {}),
+  trainStatus: (agent: string) => request<TrainJob>(`/train/${agent}`),
   catalog: (agent: string) => request<Json>(`/catalog/${agent}`),
   faults: (agent: string) => request<FaultInfo[]>(`/faults/${agent}`),
   report: (agent: string) => request<Report>(`/report/${agent}`),

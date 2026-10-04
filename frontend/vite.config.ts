@@ -10,6 +10,7 @@ export default defineConfig({
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
   server: {
-    proxy: { '/api': { target: 'http://localhost:8000', rewrite: (p) => p.replace(/^\/api/, '') } },
+    // API_PORT lets a second copy run beside the usual one (default 8000)
+    proxy: { '/api': { target: `http://localhost:${process.env.API_PORT ?? 8000}`, rewrite: (p) => p.replace(/^\/api/, '') } },
   },
 })
