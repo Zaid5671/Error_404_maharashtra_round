@@ -8,12 +8,15 @@ stopping at any point leaves a balanced dataset.
   python -m blackbox.generate --agent pizza --status   # counts only, no LLM calls
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import random
 import threading
 import time
 from collections import Counter
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -156,6 +159,102 @@ def main() -> None:
         list(pool.map(work, groups))
 
     log(args.agent, f"{'stopped' if _stop.is_set() else 'done'} after {(time.time() - start) / 60:.1f} min\n{status(args.agent)}")
+
+
+# --- generation started from the app (agents connected by URL) ------------------------------------
+
+
+def generate_from_app(
+    agent: str,
+    *,
+    runs_per_kind: int,
+    faults_per_run: int,
+    log: Callable[[str], None],
+    stop: threading.Event,
+    progress: Callable[[int, int], None],
+    workers: int = 2,
+) -> dict:
+    """Make labelled runs for an agent: each kind of example task `runs_per_kind` times (clean
+    runs), then `faults_per_run` faulted copies of each clean run (one value changed in one tool's
+    output, the rest re-run from there). Train/test is split by kind. One tool's faults are kept
+    out of training entirely, so the report can show accuracy on a fault type the model never saw.
+    Resumable: runs already on disk are skipped."""
+    adapter = get_agent(agent)
+    kinds = adapter.templates()
+    if len(kinds) < 2:
+        raise ValueError("the agent needs at least 2 kinds of example tasks, so some can be kept for testing (4 or more is better)")
+    specs = adapter.faults()
+    tools = sorted({s.step_name for s in specs})
+    if not tools:
+        raise ValueError("the agent has no tools wrapped with @bb.tool, so there is nothing to plant faults in")
+    held_out = random.Random(agent).choice(tools) if len(tools) > 1 else None
+    exclude = {s.type for s in specs if s.step_name == held_out}
+    test_kinds = sorted(k for k in kinds if split_of(k, kinds) == "test")
+    log(f"{len(kinds)} kinds of task: test on {', '.join(test_kinds)}; train on the rest")
+    if held_out:
+        log(f"faults on {held_out} are kept for testing only (an unseen fault type)")
+
+    groups = [(kind, seed) for seed in range(runs_per_kind) for kind in kinds]
+    total, done, lock = len(groups) * (1 + faults_per_run), [0], threading.Lock()
+    counts: Counter = Counter()
+
+    def tick(n: int = 1) -> None:
+        with lock:
+            done[0] += n
+            progress(done[0], total)
+
+    def group(g: tuple[str, int]) -> None:
+        kind, seed = g
+        if stop.is_set():
+            return
+        split = split_of(kind, kinds)
+        clean_id = f"{kind}__s{seed}"
+        clean = _load_or_none(agent, clean_id)
+        if clean is None:
+            clean = adapter.run(adapter.make_task(kind, seed), run_id=clean_id, source="generated")
+            clean["split"] = split
+            store.save_run(clean)
+            log(f"{'✓' if clean['outcome'] == 'success' else '✗'} clean    {clean_id}  {len(clean['steps'])} steps")
+        tick()
+        counts["clean"] += 1
+        if clean["outcome"] != "success":  # the agent got it wrong by itself: no reference to break
+            counts["clean_failed"] += 1
+            tick(faults_per_run)
+            return
+        used: set[str] = set()
+        for j in range(faults_per_run):
+            if stop.is_set():
+                return
+            run_id = f"{clean_id}__f{j}"
+            faulted = _load_or_none(agent, run_id)
+            if faulted is None:
+                faulted = injector.inject(adapter, clean, run_id=run_id, rng=random.Random(run_id), avoid=used,
+                                          exclude=exclude if split == "train" else set())
+                if faulted is not None:
+                    store.save_run(faulted)
+                    f = faulted["fault"]
+                    verdict = "✗ failed" if faulted["outcome"] == "failure" else "✓ fault didn't matter"
+                    log(f"fault    {run_id}  {f['type']} at step {f['step_id']} ({f['detail']}) → {verdict}")
+            if faulted is not None:
+                used.add(faulted["fault"]["type"])
+                counts["failed" if faulted["outcome"] == "failure" else "harmless"] += 1
+            tick()
+
+    def safe(g: tuple[str, int]) -> None:
+        try:
+            group(g)
+        except Exception as e:  # noqa: BLE001 - one bad run must not stop the batch, but a dead agent does
+            log(f"error in {g[0]} #{g[1]}: {type(e).__name__}: {e}")
+            if "not reachable" in str(e):
+                stop.set()
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        list(pool.map(safe, groups))
+    summary = {"clean": counts["clean"], "failed": counts["failed"], "harmless": counts["harmless"],
+               "clean_failed": counts["clean_failed"], "held_out_tool": held_out}
+    log(f"{'stopped' if stop.is_set() else 'generated'}: {summary['clean']} clean runs, {summary['failed']} failures "
+        f"with a known culprit, {summary['harmless']} faults that didn't change the result")
+    return summary
 
 
 if __name__ == "__main__":

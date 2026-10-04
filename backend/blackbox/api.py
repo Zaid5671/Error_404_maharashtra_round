@@ -19,9 +19,10 @@ import threading
 import uuid
 from collections.abc import Callable
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from sse_starlette import EventSourceResponse
 
 from blackbox import store
@@ -32,6 +33,7 @@ from blackbox.diagnose import diagnose, load_model
 from blackbox.injector import live_fault
 from blackbox import importer, index, jobs, registry
 from blackbox.registry import get_agent
+from blackbox.remote import AgentProtocolError, AgentUnreachable
 from blackbox.replay import ReplayError, check_edit, new_replay_id, replay
 
 log = logging.getLogger("blackbox.api")
@@ -54,6 +56,13 @@ def _warm_caches() -> None:
 
 class Cancelled(Exception):
     """The browser closed the stream; stop the agent."""
+
+
+@app.exception_handler(AgentUnreachable)
+@app.exception_handler(AgentProtocolError)
+async def _agent_down(_: Request, e: Exception) -> JSONResponse:
+    """An agent connected by URL isn't answering (or answered wrongly): say so plainly."""
+    return JSONResponse(status_code=503 if isinstance(e, AgentUnreachable) else 502, content={"detail": str(e)})
 
 
 # --- helpers -----------------------------------------------------------------------------------
@@ -79,6 +88,17 @@ def _adapter(agent: str) -> AgentAdapter:
     if not registry.is_connected(agent):
         raise HTTPException(400, f"'{agent}' is an imported agent: it runs outside the app, so it can't be run or replayed here")
     return get_agent(agent)
+
+
+def _templates(agent: str) -> list[str]:
+    """A connected agent's task kinds; [] for imported agents or a URL agent that isn't answering
+    (the split then comes from each run's own template)."""
+    if not registry.is_connected(agent):
+        return []
+    try:
+        return get_agent(agent).templates()
+    except (AgentUnreachable, AgentProtocolError):
+        return []
 
 
 def _load(agent: str, run_id: str) -> dict:
@@ -112,6 +132,8 @@ def _stream(work: Callable[[EventFn], dict]) -> EventSourceResponse:
             log.info("stream closed by the client; agent stopped")
         except QuotaExhausted:
             emit("error", {"message": "The LLM provider's daily quota is used up. Try again later or switch provider."})
+        except (AgentUnreachable, AgentProtocolError) as e:
+            emit("error", {"message": f"{e}. Start the agent, or check its URL on the Agents page."})
         except Exception as e:  # noqa: BLE001 - any agent failure becomes an error event
             log.exception("run failed")
             emit("error", {"message": f"The run failed: {type(e).__name__}: {e}"})
@@ -160,6 +182,36 @@ def add_agent(body: NewAgent) -> dict:
         raise HTTPException(400, str(e)) from e
 
 
+class Probe(BaseModel):
+    url: str
+
+
+@app.post("/agents/probe")
+def probe_agent(body: Probe) -> dict:
+    """Test connection: ask the agent at this URL who it is."""
+    try:
+        return registry.probe(body.url)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+
+
+class ConnectAgent(BaseModel):
+    name: str
+    url: str
+    title: str = ""
+    description: str = ""
+
+
+@app.post("/agents/connect")
+def connect_agent(body: ConnectAgent) -> dict:
+    """Connect an agent that runs the Black Box SDK, by its URL."""
+    try:
+        agent = registry.add_connected(body.name, body.url, body.title, body.description)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {**agent, "kind": "connected", "via": "sdk", "online": True}
+
+
 @app.get("/agent/{agent}")
 def agent_details(agent: str) -> dict:
     """What the Agents page shows: kind, the agent's own description (connected agents), the tools
@@ -167,7 +219,10 @@ def agent_details(agent: str) -> dict:
     _known(agent)
     connected = registry.is_connected(agent)
     adapter = get_agent(agent) if connected else None
-    info = getattr(adapter, "describe", lambda: {})() if adapter else {}
+    try:
+        info = getattr(adapter, "describe", lambda: {})() if adapter else {}
+    except (AgentUnreachable, AgentProtocolError):
+        info = {}  # a URL agent that isn't running: show what its saved runs say
     meta = None
     try:
         meta = load_model(agent)[2]
@@ -176,9 +231,17 @@ def agent_details(agent: str) -> dict:
     base = next(a for a in registry.all_agents() if a["name"] == agent)
     descriptions = info.get("tools", {})
     tools = [{**t, "description": descriptions.get(t["name"])} for t in index.tool_usage(agent)]
-    data = index.dataset(agent, adapter.templates() if adapter else [])
+    data = index.dataset(agent, _templates(agent))
+    remote = None
+    if base.get("via") == "sdk":
+        remote = {"url": base["url"], "online": base["online"]}
+        if base["online"]:
+            sdk = adapter.info(fresh=True)
+            remote |= {"sdk": sdk.get("sdk"), "kinds": sdk.get("kinds", []), "examples": len(sdk.get("examples", [])),
+                       "has_check": bool(sdk.get("has_check"))}
     return {**base, "llm": info.get("llm"), "tools": tools, "templates": data["templates"],
-            "model": meta, "can_run": connected, "n_runs": len(index.summaries(agent)), "n_dataset_runs": data["total"]}
+            "model": meta, "can_run": connected, "n_runs": len(index.summaries(agent)), "n_dataset_runs": data["total"],
+            "remote": remote}
 
 
 @app.get("/runs/{agent}")
@@ -204,7 +267,7 @@ def replays(agent: str) -> list[dict]:
 @app.get("/dataset/{agent}")
 def dataset(agent: str) -> dict:
     _known(agent)
-    return index.dataset(agent, get_agent(agent).templates() if registry.is_connected(agent) else [])
+    return index.dataset(agent, _templates(agent))
 
 
 class ImportBody(BaseModel):
@@ -228,6 +291,30 @@ def start_training(agent: str) -> dict:
 @app.get("/train/{agent}")
 def training_status(agent: str) -> dict:
     return jobs.status(_known(agent))
+
+
+class GenerateBody(BaseModel):
+    runs_per_kind: int = Field(default=6, ge=1, le=50)
+    faults_per_run: int = Field(default=2, ge=0, le=6)
+
+
+@app.post("/generate/{agent}")
+def start_generating(agent: str, body: GenerateBody) -> dict:
+    """Generate labelled runs for an agent connected by URL, then train and evaluate."""
+    _known(agent)
+    if not any(a["name"] == agent for a in registry.connected_agents()):
+        raise HTTPException(400, "only agents connected by URL generate data from the app")
+    if not registry.online(agent):
+        raise HTTPException(503, f"agent '{agent}' isn't answering: start it, then try again")
+    try:
+        return jobs.start_generate(agent, body.runs_per_kind, body.faults_per_run)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e)) from e
+
+
+@app.post("/generate/{agent}/stop")
+def stop_generating(agent: str) -> dict:
+    return jobs.stop(_known(agent))
 
 
 @app.get("/catalog/{agent}")
@@ -263,6 +350,19 @@ async def run(body: RunRequest) -> EventSourceResponse:
         if body.fault_mode != "surprise" or body.fault_type not in live:
             raise HTTPException(400, f"'{body.fault_type}' can't be hidden in a live run; choose one of {sorted(live)}")
     run_id = f"live_{uuid.uuid4().hex[:8]}"
+
+    if getattr(adapter, "plants_live_faults", False):  # an agent connected by URL: its SDK hides the fault
+        types = sorted(f.type for f in adapter.faults() if f.family == "tool")
+        planted = (body.fault_type or RNG().choice(types)) if body.fault_mode == "surprise" and types else None
+
+        def work_remote(on_event: EventFn) -> dict:
+            on_event("run_started", {"run_id": run_id, "agent": body.agent, "task": task["task"],
+                                     "request_text": task["request_text"]})
+            result = adapter.run(task, run_id=run_id, source="live", on_event=on_event, live_fault=planted)
+            store.save_run(result)
+            return result
+
+        return _stream(work_remote)
 
     def work(on_event: EventFn) -> dict:
         on_event("run_started", {"run_id": run_id, "agent": body.agent, "task": task["task"],
