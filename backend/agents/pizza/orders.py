@@ -57,7 +57,8 @@ TEMPLATES: dict[str, Template] = {
 
 # --- wording -------------------------------------------------------------------
 
-QTY_WORDS = {1: ["1", "one", "a"], 2: ["2", "two"], 3: ["3", "three"]}
+QTY_WORDS = {1: ["1", "one", "a"], 2: ["2", "two"], 3: ["3", "three"]}  # templates use 1-3
+QTY_WORDS |= {n: [str(n), w] for n, w in enumerate(["four", "five", "six", "seven", "eight", "nine"], start=4)}  # form orders: up to 9
 OPENERS = ["", "I'd like ", "Can I get ", "Please send ", "Order: ", "Hi, I want "]
 COUPON_PHRASES = [", code {c}", ". Use coupon {c}", " with promo code {c}", " (apply {c})"]
 AREA_PHRASES = [", deliver to {a}", ". I'm in {a}", ", delivery to {a}", ". Address is in {a}"]

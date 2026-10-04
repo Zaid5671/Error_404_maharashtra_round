@@ -35,7 +35,8 @@ export function LiveRun() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const { canRun } = useAgent()
 
-  const showingLive = runId ? live.meta?.run_id === runId : live.status === 'running'
+  // on the form page: the run starting, or an error before it got a run id (e.g. a rejected order)
+  const showingLive = runId ? live.meta?.run_id === runId : live.status === 'running' || (live.status === 'error' && !live.meta)
   const running = live.status === 'running'
 
   // A run opened by URL (refresh or link): load it unless it's the one streaming right now.
