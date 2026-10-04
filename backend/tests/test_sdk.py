@@ -71,3 +71,21 @@ def test_divergence_falls_back_to_live():
     bad[1]["name"] = "something_else"
     _, _, done = run(c, cached=bad, override={"step": 3, "output": steps[2]["output"]})
     assert done["diverged"]
+
+
+def test_llm_decision_fault_changes_one_argument():
+    from blackbox.generic_faults import mutate_args, strings_by_field
+
+    llm_out = {"text": "", "calls": [{"id": "c0", "tool": "book_flight", "args": {"flight": "6E 2", "fare": 80, "people": 2}}]}
+    strings = strings_by_field([{"flights": [{"flight": "AI 1"}, {"flight": "6E 2"}]}])
+    new, detail = mutate_args(llm_out, "text", 1, strings)
+    assert new["calls"][0]["args"]["flight"] == "AI 1" and detail.startswith("book_flight(flight)")
+    assert llm_out["calls"][0]["args"]["flight"] == "6E 2"  # the original is untouched
+    assert mutate_args({"text": "done", "calls": []}, "number", 1, {}) is None
+
+
+def test_task_values_do_not_link_steps():
+    c = TestClient(sdk_agent.make_app())
+    steps, _, _ = run(c)
+    # book_flight's people=2 comes from the task, not from the search: it links via the flight and fare only
+    assert set(steps[3]["reads"]) == {"llm", "search_flights"}

@@ -43,7 +43,8 @@ def decode(output: dict) -> Any:
 
 
 def _scalars(obj: Any) -> set:
-    """Values worth matching between steps: strings of 2+ chars and numbers other than 0 and 1."""
+    """Values distinctive enough to link two steps: strings of 3+ characters and numbers other
+    than 0 and 1 (true/false, 1, "M" or "OK" appear everywhere and would link unrelated steps)."""
     out: set = set()
     if isinstance(obj, dict):
         for v in obj.values():
@@ -51,7 +52,7 @@ def _scalars(obj: Any) -> set:
     elif isinstance(obj, list):
         for v in obj:
             out |= _scalars(v)
-    elif isinstance(obj, str) and len(obj.strip()) >= 2:
+    elif isinstance(obj, str) and len(obj.strip()) >= 3:
         out.add(obj.strip().lower())
     elif isinstance(obj, (int, float)) and not isinstance(obj, bool) and obj not in (0, 1):
         out.add(float(obj))
@@ -65,8 +66,10 @@ class Session:
         cached: list[dict] | None = None,
         override: dict | None = None,
         fault: dict | None = None,
+        task: dict | None = None,
     ) -> None:
         self.emit = emit
+        self.task_values = _scalars(task or {})  # values the user gave: shared by many steps, so they link nothing
         self.cached = cached or []
         self.override = override
         self.fault = dict(fault) if fault else None
@@ -162,7 +165,7 @@ class Session:
         if kind == "llm":
             reads = list(dict.fromkeys(self.tools_since_llm)) or (["llm"] if "llm" in self.last_writer else [])
         else:
-            wanted = _scalars(step_input)
+            wanted = _scalars(step_input) - self.task_values
             reads = ["llm"] if "llm" in self.last_writer else []
             for name, output in self.state.items():
                 if name != "llm" and wanted & _scalars(output):
@@ -242,6 +245,7 @@ class _Completions:
         self._client = client
 
     def create(self, **kwargs: Any) -> Any:
+        kwargs.setdefault("temperature", 0)  # replays and "did the result change?" need repeatable answers
         session = _current.get()
         if session is None:
             return self._client.chat.completions.create(**kwargs)
@@ -262,7 +266,8 @@ class _Chat:
 
 
 class llm:  # noqa: N801 - used like a function: client = bb.llm(OpenAI(...))
-    """Wrap an OpenAI-compatible client: every chat.completions.create call is recorded as a step."""
+    """Wrap an OpenAI-compatible client: every chat.completions.create call is recorded as a step.
+    Calls default to temperature 0, so a replay gets the same answers the original run got."""
 
     def __init__(self, client: Any) -> None:
         self._client = client

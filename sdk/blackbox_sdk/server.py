@@ -50,6 +50,7 @@ def create_app(
     make_task: Callable[[str, int], dict] | None = None,
     check: Callable[[dict, Any], Any] | None = None,
     request_key: str = "request",
+    llm: str | None = None,
 ):
     from fastapi import FastAPI, HTTPException
     from fastapi.responses import StreamingResponse
@@ -64,7 +65,7 @@ def create_app(
             "name": name, "title": title or name, "description": description,
             "sdk": f"blackbox-sdk {VERSION}", "request_key": request_key,
             "tools": sorted(TOOLS.values(), key=lambda t: (t["kind"] != "llm", t["name"])),
-            "kinds": kinds, "examples": example_list, "has_check": check is not None,
+            "kinds": kinds, "examples": example_list, "has_check": check is not None, "llm": llm,
         }
 
     @app.post("/task")
@@ -90,7 +91,7 @@ def create_app(
             lines.put(json.dumps({"event": event, "data": data}, default=str))
 
         def work() -> None:
-            session = Session(emit, body.get("cached"), body.get("override"), body.get("fault"))
+            session = Session(emit, body.get("cached"), body.get("override"), body.get("fault"), body["task"])
             try:
                 try:
                     result, error = run_session(agent, body["task"], session), None

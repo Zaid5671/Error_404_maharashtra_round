@@ -77,6 +77,9 @@ def test_generate_train_diagnose_live_and_replay(client):
     faults = client.get("/faults/mini").json()
     assert any(f["type"].startswith("search_flights:") for f in faults)
     assert any(not f["seen"] for f in faults) and any(f["seen"] for f in faults)
+    assert any(f["type"].startswith("llm:") and f["family"] == "llm" and not f["live"] for f in faults)
+    families = {r["fault_family"] for r in client.get("/runs/mini?source=generated&limit=200").json()["items"] if r.get("fault_family")}
+    assert families == {"tool", "llm"}  # both: a tool returned something wrong, the LLM decided wrongly
 
     # diagnose a failed test run
     failed = client.get("/runs/mini?source=all&outcome=failure&limit=200").json()["items"]

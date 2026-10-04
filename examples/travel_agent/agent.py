@@ -149,4 +149,4 @@ def check(task: dict, result: dict | None) -> dict:
 if __name__ == "__main__":
     bb.serve(run_agent, name="travel", port=int(os.getenv("TRAVEL_PORT", "8100")), title="Flight booking agent",
              description="Finds flights, checks seats, prices and books the cheapest one that fits.",
-             examples=EXAMPLES, make_task=make_task, check=check)
+             examples=EXAMPLES, make_task=make_task, check=check, llm=f"{PROVIDER} · {MODEL}")

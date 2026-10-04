@@ -115,7 +115,7 @@ class RemoteAdapter:
     def describe(self) -> dict:
         info = self.info()
         return {"title": info.get("title") or self.name, "description": info.get("description", ""),
-                "llm": None, "tools": {t["name"]: t.get("description") for t in info.get("tools", [])}}
+                "llm": info.get("llm"), "tools": {t["name"]: t.get("description") for t in info.get("tools", [])}}
 
     def templates(self) -> list[str]:
         return list(self.info().get("kinds") or [])
@@ -139,13 +139,15 @@ class RemoteAdapter:
 
     def faults(self) -> list[FaultSpec]:
         """Generic faults on the agent's tools, for the kinds of values their outputs really have."""
-        tools = {t["name"]: set(generic_faults.KINDS) for t in self.info().get("tools", []) if t.get("kind") == "tool"}
+        reported = self.info().get("tools", [])
+        tools = {t["name"]: set(generic_faults.KINDS) for t in reported if t.get("kind") == "tool"}
+        llm_steps = {t["name"] for t in reported if t.get("kind") == "llm"}
         observed: dict[str, set[str]] = {}
         for path in store.list_runs(self.name)[:40]:
             for step in json.loads(path.read_text(encoding="utf-8"))["steps"]:
                 if step["kind"] == "tool" and step["name"] in tools and isinstance(step["output"], dict):
                     observed.setdefault(step["name"], set()).update(generic_faults.kinds_in(step["output"]))
-        return generic_faults.specs({t: observed.get(t, kinds) for t, kinds in tools.items()})
+        return generic_faults.specs({t: observed.get(t, kinds) for t, kinds in tools.items()}, llm_steps)
 
     def judge(self, expected: dict | None, actual: dict | None) -> str:
         if expected is None:

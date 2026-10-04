@@ -97,6 +97,23 @@ def mutate(output: dict, kind: str, seed: int, strings: dict[str, list[str]]) ->
     return None
 
 
+def mutate_args(output: dict, kind: str, seed: int, strings: dict[str, list[str]]) -> tuple[dict, str] | None:
+    """An LLM step's output ({"text", "calls": [{"tool", "args"}]}) with one tool-call argument
+    changed: the LLM "chose wrongly", e.g. another flight number or one more passenger."""
+    calls = output.get("calls") or []
+    if not calls:
+        return None
+    change = mutate({"calls": [{"args": c.get("args") or {}} for c in calls]}, kind, seed, strings)
+    if change is None:
+        return None
+    new = copy.deepcopy(output)
+    for i, c in enumerate(change[0]["calls"]):
+        new["calls"][i]["args"] = c["args"]
+    path, rest = change[1].split(" ", 1)
+    i = int(path.split("]")[0].split("[")[1])
+    return new, f"{calls[i].get('tool')}({path.split('.args.', 1)[-1]}) {rest}"
+
+
 # --- fault specs for the injector -----------------------------------------------------------------
 
 
@@ -111,13 +128,28 @@ def _maker(kind: str):
     return make
 
 
-def specs(tools: dict[str, set[str]]):
-    """One FaultSpec per (tool, kind of value its outputs have). `tools` maps a tool to the kinds
-    seen in its outputs (all kinds when nothing has been recorded yet)."""
+def _llm_maker(kind: str):
+    def make(run: dict, step: dict, rng: random.Random) -> dict | None:
+        if step.get("error") or not isinstance(step.get("output"), dict):
+            return None
+        strings = strings_by_field([s["output"] for s in run["steps"] if s["kind"] == "tool"])
+        change = mutate_args(step["output"], kind, rng.randrange(10**9), strings)
+        return None if change is None else {"args": change[0], "detail": change[1]}
+
+    return make
+
+
+def specs(tools: dict[str, set[str]], llm_steps: set[str] = frozenset()):
+    """One FaultSpec per (tool, kind of value its outputs have), plus LLM-decision faults on the
+    agent's LLM steps ("llm:number", "llm:text": one argument of a tool call changed). `tools` maps
+    a tool to the kinds seen in its outputs (all kinds when nothing has been recorded yet)."""
     from blackbox.adapter import FaultSpec
 
-    return [FaultSpec(type=f"{tool}:{kind}", family="tool", step_name=tool, make=_maker(kind))
-            for tool in sorted(tools) for kind in KINDS if kind in tools[tool]]
+    tool_specs = [FaultSpec(type=f"{tool}:{kind}", family="tool", step_name=tool, make=_maker(kind))
+                  for tool in sorted(tools) for kind in KINDS if kind in tools[tool]]
+    llm_specs = [FaultSpec(type=f"{name}:{kind}", family="llm", step_name=name, make=_llm_maker(kind))
+                 for name in sorted(llm_steps) for kind in ("number", "text")]
+    return tool_specs + llm_specs
 
 
 def kinds_in(output) -> set[str]:

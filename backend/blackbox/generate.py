@@ -184,11 +184,12 @@ def generate_from_app(
     if len(kinds) < 2:
         raise ValueError("the agent needs at least 2 kinds of example tasks, so some can be kept for testing (4 or more is better)")
     specs = adapter.faults()
-    tools = sorted({s.step_name for s in specs})
+    families = sorted({s.family for s in specs}, key=lambda f: f != "tool")  # tool faults, then LLM decisions
+    tools = sorted({s.step_name for s in specs if s.family == "tool"})
     if not tools:
         raise ValueError("the agent has no tools wrapped with @bb.tool, so there is nothing to plant faults in")
     held_out = random.Random(agent).choice(tools) if len(tools) > 1 else None
-    exclude = {s.type for s in specs if s.step_name == held_out}
+    exclude = {s.type for s in specs if s.family == "tool" and s.step_name == held_out}
     test_kinds = sorted(k for k in kinds if split_of(k, kinds) == "test")
     log(f"{len(kinds)} kinds of task: test on {', '.join(test_kinds)}; train on the rest")
     if held_out:
@@ -228,8 +229,13 @@ def generate_from_app(
             run_id = f"{clean_id}__f{j}"
             faulted = _load_or_none(agent, run_id)
             if faulted is None:
-                faulted = injector.inject(adapter, clean, run_id=run_id, rng=random.Random(run_id), avoid=used,
-                                          exclude=exclude if split == "train" else set())
+                # alternate the families: a tool returned something wrong / the LLM decided wrongly
+                order = families[j % len(families):] + families[: j % len(families)]
+                for family in order:
+                    faulted = injector.inject(adapter, clean, run_id=run_id, rng=random.Random(run_id), avoid=used,
+                                              family=family, exclude=exclude if split == "train" else set())
+                    if faulted is not None:
+                        break
                 if faulted is not None:
                     store.save_run(faulted)
                     f = faulted["fault"]

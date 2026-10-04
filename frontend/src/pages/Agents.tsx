@@ -108,7 +108,8 @@ def search_flights(origin, dest, date): ...
 client = bb.llm(OpenAI(...))  # every LLM call is recorded
 
 bb.serve(run_agent, name="travel", port=8100,
-         examples=[{"kind": "one_way", "task": {"request": "..."}}, ...])`
+         examples=[{"kind": "one_way", "task": {"request": "..."}}, ...],
+         check=is_right)              # optional: says if a result is correct`
 
 function ConnectForm({ onDone, onCancel }: { onDone: (name: string) => void; onCancel: () => void }) {
   const [name, setName] = useState('')

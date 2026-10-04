@@ -11,7 +11,14 @@
 
 Then in the app: Agents -> Connect agent -> http://127.0.0.1:8100. The app can now run the agent,
 record every step, plant faults, replay from any step, generate training data and diagnose
-failures. Tools should return JSON-like values (a dict is best).
+failures.
+
+Good to know:
+  - Tools should return JSON-like values (a dict is best).
+  - Tools should not change shared data between runs (or should reset it each run): a replay skips
+    the earlier tool calls, so a change they made would be missing.
+  - Give a check(task, result) -> bool to bb.serve when you can: it says whether a result is right.
+  - LLM calls default to temperature 0, so replays are repeatable.
 """
 
 from blackbox_sdk.core import llm, tool
