@@ -4,7 +4,7 @@
 
 import { cn } from '@/lib/utils'
 
-export type TickKind = 'pending' | 'running' | 'done' | 'ok' | 'bad' | 'culprit' | 'reused' | 'edited' | 'rerun' | 'same' | 'diff' | 'heat'
+export type TickKind = 'pending' | 'running' | 'done' | 'ok' | 'bad' | 'culprit' | 'reused' | 'edited' | 'rerun' | 'same' | 'diff' | 'only' | 'heat'
 
 export interface Tick {
   id: number
@@ -25,6 +25,7 @@ const KIND: Record<TickKind, string> = {
   rerun: 'bg-good',
   same: 'bg-border',
   diff: 'bg-bad',
+  only: 'border-2 border-dashed border-bad bg-bad-soft',
   heat: '',
 }
 

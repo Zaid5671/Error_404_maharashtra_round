@@ -1,61 +1,22 @@
-// Compare: two runs side by side (usually a failed run and its replay), the steps that changed,
-// where they first part ways, and a table of every value that differs.
+// Compare: two runs side by side (usually a failed run and its replay). Steps are lined up by what
+// they did, not by number (lib/align.ts), so a detour one run took shows as "only in original"
+// instead of shifting every later step out of line.
 
 import { useParams } from 'react-router'
 import { getPlugin } from '@/agents/registry'
 import { api } from '@/api/client'
 import { useApi } from '@/api/useApi'
 import { Panel } from '@/components/Panel'
-import { RecorderTrack } from '@/components/RecorderTrack'
+import { RecorderTrack, type TickKind } from '@/components/RecorderTrack'
 import { Loading, Problem } from '@/components/StateBox'
 import { RunGraph } from '@/components/graph/RunGraph'
 import type { Tag } from '@/components/graph/StepNode'
+import { alignRuns, type Pair, type PairKind } from '@/lib/align'
 import { cn } from '@/lib/utils'
 import type { Run, Step } from '@/types/contract'
 
-interface Change {
-  step: number
-  name: string
-  field: string
-  before: string
-  after: string
-}
-
-/** Every scalar in a value, by path: {cart: [{qty: 2}]} -> {"cart[0].qty": 2}. */
-function flatten(value: unknown, path = '', out: Record<string, unknown> = {}) {
-  if (Array.isArray(value)) value.forEach((v, i) => flatten(v, `${path}[${i}]`, out))
-  else if (value !== null && typeof value === 'object') Object.entries(value).forEach(([k, v]) => flatten(v, path ? `${path}.${k}` : k, out))
-  else out[path] = value
-  return out
-}
-
-const show = (v: unknown) => (v === undefined ? '—' : JSON.stringify(v))
-
-function diffRuns(a: Run, b: Run): Change[] {
-  const ids = [...new Set([...a.steps, ...b.steps].map((s) => s.id))].sort((x, y) => x - y)
-  const changes: Change[] = []
-  for (const id of ids) {
-    const sa = a.steps.find((s) => s.id === id)
-    const sb = b.steps.find((s) => s.id === id)
-    if (!sa || !sb) {
-      changes.push({ step: id, name: (sa ?? sb)!.name, field: '(step)', before: sa ? sa.name : '—', after: sb ? sb.name : '—' })
-      continue
-    }
-    if (sa.name !== sb.name) {
-      changes.push({ step: id, name: sb.name, field: '(step)', before: sa.name, after: sb.name })
-      continue
-    }
-    for (const part of ['input', 'output'] as const) {
-      const fa = flatten(sa[part]), fb = flatten(sb[part])
-      for (const key of [...new Set([...Object.keys(fa), ...Object.keys(fb)])]) {
-        if (JSON.stringify(fa[key]) !== JSON.stringify(fb[key])) {
-          changes.push({ step: id, name: sa.name, field: `${part === 'input' ? 'in.' : ''}${key}`, before: show(fa[key]), after: show(fb[key]) })
-        }
-      }
-    }
-  }
-  return changes
-}
+const TICK: Record<PairKind, TickKind> = { same: 'same', changed: 'diff', moved: 'diff', onlyA: 'only', onlyB: 'only' }
+const stepName = (s: Step) => `#${s.id} ${s.name}`
 
 export function Compare() {
   const { agent = 'pizza', originalId = '', replayId = '' } = useParams()
@@ -65,37 +26,62 @@ export function Compare() {
   if (data.error || !data.data) return <Problem message={data.error ?? 'No data'} back={{ to: `/${agent}/runs`, label: 'Back to runs' }} />
   const [a, b] = data.data
 
-  const changes = diffRuns(a, b)
-  const changed = [...new Set(changes.map((c) => c.step))]
-  const first = changed[0] ?? null
+  const pairs = alignRuns(a.steps, b.steps)
   const isReplay = b.parent_run_id === a.run_id && b.replayed_from_step != null
   const edited = isReplay ? b.replayed_from_step! : null
   const reused = isReplay ? b.steps.filter((s) => s.id < edited!).map((s) => s.id) : []
-  const identical = first === null ? b.steps.length : first - 1
+  const bName = isReplay ? 'replay' : 'other run'
+
+  const kindOf = (which: 'a' | 'b') => new Map(pairs.flatMap((p) => (p[which] ? [[p[which]!.id, p.kind] as const] : [])))
+  const kinds = { a: kindOf('a'), b: kindOf('b') }
+  const firstDiff = pairs.findIndex((p) => p.kind !== 'same')
+  const markerOf = (which: 'a' | 'b') => (firstDiff < 0 ? null : pairs.slice(firstDiff).find((p) => p[which])?.[which]?.id ?? null)
+  const count = (k: PairKind) => pairs.filter((p) => p.kind === k).length
+  const onlyA = pairs.filter((p) => p.kind === 'onlyA').map((p) => p.a!)
+  const onlyB = pairs.filter((p) => p.kind === 'onlyB').map((p) => p.b!)
 
   const side = (run: Run, which: 'a' | 'b') => {
-    const tags = (s: Step): Tag[] => which === 'b' && reused.includes(s.id) ? [['plain', 'REUSED']]
-      : which === 'b' && s.id === edited ? [['accent', 'EDITED']] : changed.includes(s.id) ? [['bad', 'CHANGED']] : []
+    const k = kinds[which]
+    const tags = (s: Step): Tag[] => {
+      if (which === 'b' && reused.includes(s.id)) return [['plain', 'REUSED']]
+      if (which === 'b' && s.id === edited) return [['accent', 'EDITED']]
+      const kind = k.get(s.id)
+      return kind === 'onlyA' || kind === 'onlyB' ? [['bad', `ONLY IN ${which === 'a' ? 'ORIGINAL' : bName.toUpperCase()}`]]
+        : kind === 'changed' ? [['bad', 'CHANGED']] : kind === 'moved' ? [['bad', 'MOVED']] : []
+    }
     const ok = run.outcome === 'success'
+    const marker = markerOf(which)
     return (
       <Panel title={which === 'a' ? 'Original' : isReplay ? 'Replay' : 'Other run'}
-        sub={<span className={cn('rounded px-2 py-0.5 font-mono text-[11px] font-semibold', ok ? 'bg-good-soft text-good' : 'bg-bad-soft text-bad')}>{ok ? '✓ correct' : '✗ wrong'}</span>}>
+        sub={<span className={cn('rounded px-2 py-0.5 font-mono text-[11px] font-semibold', ok ? 'bg-good-soft text-good' : 'bg-bad-soft text-bad')}>{ok ? '✓ correct' : '✗ wrong'} · {run.steps.length} steps</span>}>
         <div className="border-b border-dashed px-3.5 py-2 font-mono text-xs break-all text-muted-foreground">{run.run_id}</div>
         <div className="border-b px-3.5 py-2 text-[13px]">{plugin.resultLine(run)}</div>
-        <RunGraph steps={run.steps} label={plugin.stepLabel} changedIds={changed} tags={tags} final={ok ? 'good' : 'bad'}
+        <RunGraph steps={run.steps} label={plugin.stepLabel} final={ok ? 'good' : 'bad'} tags={tags}
+          changedIds={run.steps.filter((s) => k.get(s.id) !== 'same').map((s) => s.id)}
           cachedIds={which === 'b' ? reused : undefined} editedId={which === 'b' ? edited : null} />
-        <RecorderTrack title="Track" right={first ? `differs from step ${first} ▸` : 'identical'} markerAt={first} markerLabel="First difference"
-          ticks={run.steps.map((s) => ({ id: s.id, name: s.name, kind: changed.includes(s.id) ? 'diff' : 'same' }))} />
+        <RecorderTrack title="Track" right={marker ? `differs from step ${marker} ▸` : 'identical'} markerAt={marker} markerLabel="First difference"
+          ticks={run.steps.map((s) => ({ id: s.id, name: s.name, kind: TICK[k.get(s.id) ?? 'same'] }))} />
       </Panel>
     )
   }
 
+  const rows = pairs.filter((p) => p.kind !== 'same')
+  const summary = [
+    `${count('same')} identical`, count('changed') && `${count('changed')} changed`, count('moved') && `${count('moved')} moved`,
+    onlyA.length && `${onlyA.length} only in the original`, onlyB.length && `${onlyB.length} only in the ${bName}`,
+  ].filter(Boolean).join(' · ')
+
   return (
     <div className="grid gap-4">
       <div className="grid items-start gap-4 grid-cols-1 lg:grid-cols-2">{side(a, 'a')}{side(b, 'b')}</div>
-      <Panel title="What changed"
-        sub={first === null ? 'the two runs are identical' : `steps 1–${identical} identical · first difference at step ${first}${first === edited ? ' (your edit)' : ''}`}>
-        {changes.length === 0 ? <p className="m-0 p-3.5 text-sm text-muted-foreground">No step differs.</p> : (
+      <Panel title="What changed" sub={rows.length === 0 ? 'the two runs did the same thing' : summary}>
+        {(onlyA.length > 0 || onlyB.length > 0) && (
+          <div className="grid gap-1 border-b bg-sunk px-3.5 py-2.5 text-[13px]">
+            {onlyA.length > 0 && <span>The original took <strong>{onlyA.length} step{onlyA.length > 1 ? 's' : ''}</strong> the {bName} didn’t: <span className="font-mono">{onlyA.map(stepName).join(', ')}</span>.</span>}
+            {onlyB.length > 0 && <span>The {bName} took <strong>{onlyB.length} step{onlyB.length > 1 ? 's' : ''}</strong> the original didn’t: <span className="font-mono">{onlyB.map(stepName).join(', ')}</span>.</span>}
+          </div>
+        )}
+        {rows.length === 0 ? <p className="m-0 p-3.5 text-sm text-muted-foreground">No step differs.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-[13px]">
               <thead>
@@ -105,20 +91,36 @@ export function Compare() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
-                {changes.map((c, i) => (
-                  <tr key={i} className={cn(c.step === edited && 'bg-recorder-soft')}>
-                    <td className="border-b px-3 py-1.5 font-mono whitespace-nowrap">#{c.step} {c.name}</td>
-                    <td className="border-b px-3 py-1.5 font-mono">{c.field}{c.step === edited && <span className="ml-2 font-sans text-xs text-recorder-ink">your edit</span>}</td>
-                    <td className="border-b px-3 py-1.5 font-mono break-all text-bad line-through decoration-1">{c.before}</td>
-                    <td className="border-b px-3 py-1.5 font-mono font-semibold break-all text-good">{c.after}</td>
-                  </tr>
-                ))}
-              </tbody>
+              <tbody>{rows.flatMap((p, i) => rowsFor(p, i, edited, plugin.stepLabel))}</tbody>
             </table>
           </div>
         )}
       </Panel>
     </div>
   )
+}
+
+function rowsFor(p: Pair, i: number, edited: number | null, label: (s: Step) => string) {
+  const td = 'border-b px-3 py-1.5 align-top'
+  const isEdit = p.b?.id === edited
+  const where = p.a && p.b ? (p.a.id === p.b.id ? stepName(p.a) : `#${p.a.id} ↔ #${p.b.id} ${p.a.name}`) : stepName((p.a ?? p.b)!)
+  if (p.kind === 'onlyA' || p.kind === 'onlyB') {
+    return [(
+      <tr key={i} className="bg-bad-soft/40">
+        <td className={cn(td, 'font-mono whitespace-nowrap')}>{where}</td>
+        <td className={cn(td, 'text-xs')}>{p.kind === 'onlyA' ? 'only in the original' : 'only in this run'}</td>
+        <td className={cn(td, 'text-xs', p.a && 'text-bad line-through decoration-1')}>{p.a ? label(p.a) : '—'}</td>
+        <td className={cn(td, 'text-xs', p.b && 'font-semibold text-good')}>{p.b ? label(p.b) : '—'}</td>
+      </tr>
+    )]
+  }
+  const fields = p.changes.length ? p.changes : [{ field: '(called at a different point)', before: '', after: '' }]
+  return fields.map((c, j) => (
+    <tr key={`${i}-${j}`} className={cn(isEdit && 'bg-recorder-soft')}>
+      <td className={cn(td, 'font-mono whitespace-nowrap')}>{j === 0 ? <>{where}{p.kind === 'moved' && <span className="ml-1.5 font-sans text-xs text-muted-foreground">moved</span>}</> : ''}</td>
+      <td className={cn(td, 'font-mono')}>{c.field}{isEdit && j === 0 && <span className="ml-2 font-sans text-xs text-recorder-ink">your edit</span>}</td>
+      <td className={cn(td, 'font-mono break-all text-bad line-through decoration-1')}>{c.before}</td>
+      <td className={cn(td, 'font-mono font-semibold break-all text-good')}>{c.after}</td>
+    </tr>
+  ))
 }
