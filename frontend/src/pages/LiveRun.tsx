@@ -94,7 +94,7 @@ export function LiveRun() {
 
       <Panel title={plugin.title} sub={`${agent} agent`}>
         {showForm ? (
-          <form className="grid gap-3.5 p-3.5" onSubmit={run}>
+          <form className="grid grid-cols-[minmax(0,1fr)] gap-3.5 p-3.5" onSubmit={run}>
             <plugin.TaskForm task={task} onChange={(t: Json) => session.setDraft(agent, t)} formData={formData.data} />
             <FaultPicker agent={agent} />
             <button type="submit" disabled={running || (session.faultMode === 'choose' && !session.faultType)}

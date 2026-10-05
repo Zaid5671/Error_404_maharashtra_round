@@ -23,6 +23,13 @@ import { Training } from '@/pages/Training'
 function AgentLayout() {
   const { agent = '' } = useParams()
   const [version, setVersion] = useState(0)
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('bb.sidebar') === 'collapsed' } catch { return false }
+  })
+  const toggleSidebar = () => setCollapsed((c) => {
+    try { localStorage.setItem('bb.sidebar', c ? 'open' : 'collapsed') } catch { /* private window: not remembered */ }
+    return !c
+  })
   const list = useApi(() => api.agents(), [version])
   const agents = list.data?.items ?? []
   const info = agents.find((a) => a.name === agent) ?? null
@@ -32,8 +39,8 @@ function AgentLayout() {
 
   return (
     <AgentContext.Provider value={ctx}>
-      <div className="lg:grid lg:min-h-dvh lg:grid-cols-[240px_minmax(0,1fr)]">
-        <Sidebar />
+      <div className={collapsed ? 'lg:grid lg:min-h-dvh lg:grid-cols-[60px_minmax(0,1fr)]' : 'lg:grid lg:min-h-dvh lg:grid-cols-[240px_minmax(0,1fr)]'}>
+        <Sidebar collapsed={collapsed} onToggle={toggleSidebar} />
         <main className="min-w-0 px-4 pt-4 pb-8 lg:px-6 lg:pt-5">
           {list.error && <p className="mb-4 rounded-md border border-bad bg-bad-soft px-3 py-2 text-sm" role="alert">{list.error}</p>}
           {list.data && !info ? <NotFound what={`agent “${agent}”`} /> : (

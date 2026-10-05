@@ -18,11 +18,12 @@
   "seen_fault_types": [
     "check_seats:flag",
     "check_seats:number",
+    "check_seats:text",
     "price_booking:number",
     "price_booking:text",
     "search_flights:number",
     "search_flights:text"
   ],
-  "n_train_runs": 24,
-  "n_train_cases": 12
+  "n_train_runs": 38,
+  "n_train_cases": 19
 }

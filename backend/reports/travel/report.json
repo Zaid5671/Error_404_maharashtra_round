@@ -1,0 +1,63 @@
+{
+  "agent": "travel",
+  "n_train_runs": 38,
+  "n_test_runs": 5,
+  "overall": {
+    "top1": 0.2,
+    "top3": 0.4
+  },
+  "seen": {
+    "top1": 0.0,
+    "top3": 0.25,
+    "n": 4
+  },
+  "unseen": {
+    "top1": 1.0,
+    "top3": 1.0,
+    "n": 1
+  },
+  "fault_types": {
+    "seen": [
+      "check_seats:flag",
+      "check_seats:number",
+      "check_seats:text",
+      "price_booking:number",
+      "price_booking:text",
+      "search_flights:number",
+      "search_flights:text"
+    ],
+    "unseen": [
+      "book_flight:number"
+    ]
+  },
+  "by_type": [
+    {
+      "top1": 0.0,
+      "top3": 0.0,
+      "type": "check_seats:flag",
+      "seen": true,
+      "n": 1
+    },
+    {
+      "top1": 0.0,
+      "top3": 0.0,
+      "type": "check_seats:number",
+      "seen": true,
+      "n": 2
+    },
+    {
+      "top1": 0.0,
+      "top3": 1.0,
+      "type": "search_flights:number",
+      "seen": true,
+      "n": 1
+    },
+    {
+      "top1": 1.0,
+      "top3": 1.0,
+      "type": "book_flight:number",
+      "seen": false,
+      "n": 1
+    }
+  ]
+}

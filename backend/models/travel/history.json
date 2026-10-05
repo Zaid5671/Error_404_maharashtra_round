@@ -1,18 +1,25 @@
 [
   {
-    "status": "error",
+    "status": "done",
     "kind": "generate",
-    "started": "2026-10-04T08:28:23.473494+00:00",
-    "finished": "2026-10-04T08:33:09.678699+00:00",
-    "result": null,
-    "error": "Please reshape the input data into 2-dimensional matrix."
+    "started": "2026-10-04T08:47:15.606587+00:00",
+    "finished": "2026-10-04T08:47:22.384826+00:00",
+    "result": {
+      "n_train_runs": 38,
+      "n_test_runs": 5,
+      "top1": 0.2,
+      "top3": 0.4,
+      "unseen_top1": 1.0,
+      "unseen_n": 1
+    },
+    "error": null
   },
   {
     "status": "error",
-    "kind": "train",
-    "started": "2026-10-04T08:27:16.430754+00:00",
-    "finished": "2026-10-04T08:27:16.432753+00:00",
+    "kind": "generate",
+    "started": "2026-10-04T08:40:28.224258+00:00",
+    "finished": "2026-10-04T08:46:49.947317+00:00",
     "result": null,
-    "error": "need at least 10 successful runs and 10 labelled failures in the training split; have 0 and 0"
+    "error": "stopped before training; the runs made so far are kept"
   }
 ]

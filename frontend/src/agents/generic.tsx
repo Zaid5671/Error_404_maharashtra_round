@@ -34,12 +34,13 @@ export function GenericTaskForm({ task, onChange, formData }: TaskFormProps) {
     onChange(t)
   }
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
       {examples.length > 0 && (
-        <label className="grid gap-1 text-xs font-medium text-muted-foreground" htmlFor="task-example">
+        <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground" htmlFor="task-example">
           Start from an example task
+          {/* w-full + min-w-0: long example names must not widen the panel */}
           <select id="task-example" defaultValue="" onChange={(e) => pick(Number(e.target.value))}
-            className="h-9 rounded-md border bg-sunk px-2 text-sm text-foreground">
+            className="h-9 w-full min-w-0 truncate rounded-md border bg-sunk px-2 text-sm text-foreground">
             <option value="" disabled>Choose one of {examples.length} examples…</option>
             {examples.map((e, i) => (
               <option key={i} value={i}>{e.kind} · {String(e.task.request ?? JSON.stringify(e.task)).slice(0, 70)}</option>
@@ -47,11 +48,11 @@ export function GenericTaskForm({ task, onChange, formData }: TaskFormProps) {
           </select>
         </label>
       )}
-      <label className="grid gap-1 text-xs font-medium text-muted-foreground" htmlFor="task-json">
+      <label className="grid min-w-0 gap-1 text-xs font-medium text-muted-foreground" htmlFor="task-json">
         Task (JSON)
         <textarea
           id="task-json"
-          className="min-h-48 rounded-md border bg-sunk p-2 font-mono text-xs text-foreground"
+          className="min-h-48 w-full min-w-0 rounded-md border bg-sunk p-2 font-mono text-xs text-foreground"
           value={text}
           onChange={(e) => {
             setText(e.target.value)
